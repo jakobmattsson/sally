@@ -83,24 +83,24 @@ query('Meeting pointing to a valid call or nothing')
 
 
 
-# 
-# query('Nulling foreign keys when pointed item is removed')
-# .post('/companies')
-# .res('Created company', save 'company')
-# .post('/companies/#{company}/calls')
-# .res('Created call', save 'call1')
-# .post('/companies/#{company}/calls')
-# .res('Created call', save 'call2')
-# .post('/companies/#{company}/meetings')
-# .res('Created meeting', save 'meeting')
-# .put('/meetings/#{meeting}', () -> { origin: @call1 })
-# .res('Set origin to call1')
-# .get('/meetings/#{meeting}')
-# .res('Getting meeting referring to call1', (data) -> data.origin.should.eql @call1)
-# .del('/calls/#{call1}')
-# .get('/meetings/#{meeting}')
-# .res('Getting meeting referring to nothing', (data) -> should.not.exist data.origin)
-# .run()
-# 
-# 
-# 
+
+query('Nulling foreign keys when pointed item is removed')
+.post('/companies')
+.res('Created company', save 'company')
+.post('/companies/#{company}/calls')
+.res('Created call', save 'call1')
+.post('/companies/#{company}/calls')
+.res('Created call', save 'call2')
+.post('/companies/#{company}/meetings')
+.res('Created meeting', save 'meeting')
+.put('/meetings/#{meeting}', () -> { origin: @call1 })
+.res('Set origin to call1')
+.get('/meetings/#{meeting}')
+.res('Getting meeting referring to call1', (data) -> data.origin.should.eql @call1)
+.del('/calls/#{call1}')
+.get('/meetings/#{meeting}')
+.res('Getting meeting referring to nothing', (data) -> should.not.exist data.origin)
+.run()
+
+
+
