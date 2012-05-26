@@ -50,37 +50,31 @@ exports.exec = () ->
 
   Object.keys(db.models).forEach (modelName) ->
 
+    outers = db.getOwners(modelName)
+    manyToMany = db.getManyToMany(modelName)
+
     def 'get', "/#{modelName}", (req, res) ->
-      db.list db.models[modelName], responder(res)
+      db.list modelName, responder(res)
 
     def 'get', "/#{modelName}/:id", validateId, (req, res) ->
-      db.get db.models[modelName], req.params.id, responder(res)
+      db.get modelName, req.params.id, responder(res)
 
     def 'del', "/#{modelName}/:id", validateId, (req, res) ->
-      db.del db.models[modelName], req.params.id, responder(res)
+      db.del modelName, req.params.id, responder(res)
 
     def 'put', "/#{modelName}/:id", validateId, (req, res) ->
-      db.put db.models[modelName], req.params.id, req.body, responder(res)
-
-    paths = db.models[modelName].schema.paths
-    outers = Object.keys(paths).filter((x) -> paths[x].options['x-owner']).map (x) ->
-      plur: paths[x].options.ref
-      sing: x
-
-    manyToMany = Object.keys(paths).filter((x) -> Array.isArray paths[x].options.type).map (x) ->
-      ref: paths[x].options.type[0].ref
-      name: x
+      db.put modelName, req.params.id, req.body, responder(res)
 
     if outers.length == 0
       def 'post', "/#{modelName}", (req, res) ->
-        db.post db.models[modelName], req.body, responder(res)
+        db.post modelName, req.body, responder(res)
 
     outers.forEach (outer) ->
       def 'get', "/#{outer.plur}/:id/#{modelName}", validateId, (req, res) ->
-        db.listSub db.models[modelName], outer.sing, req.params.id, responder(res)
+        db.listSub modelName, outer.sing, req.params.id, responder(res)
 
       def 'post', "/#{outer.plur}/:id/#{modelName}", validateId, (req, res) ->
-        db.postSub db.models[modelName], req.body, outer.sing, req.params.id, responder(res)
+        db.postSub modelName, req.body, outer.sing, req.params.id, responder(res)
 
     manyToMany.forEach (many) ->
       def 'post', "/#{modelName}/:id/#{many.name}/:other", (req, res) ->
@@ -96,15 +90,14 @@ exports.exec = () ->
         db.getManyBackwards modelName, req.params.id, many.name, responder(res)
 
       def 'del', "/#{modelName}/:id/#{many.name}/:other", (req, res) ->
-        db.get db.models[many.ref], req.params.other, (err, data) ->
+        db.get many.ref, req.params.other, (err, data) ->
           db.delMany modelName, req.params.id, many.name, many.ref, req.params.other, (innerErr) ->
             responder(res)(err || innerErr, data)
 
       def 'del', "/#{many.name}/:other/#{modelName}/:id", (req, res) ->
-        db.get db.models[modelName], req.params.id, (err, data) ->
+        db.get modelName, req.params.id, (err, data) ->
           db.delMany modelName, req.params.id, many.name, many.ref, req.params.other, (innerErr) ->
             responder(res)(err || innerErr, data)
-
 
   app.get '/', (req, res) ->
     res.json

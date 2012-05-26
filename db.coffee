@@ -22,26 +22,25 @@ model = (name, schema) ->
 
 
 
-
-
 # The five base methods
 # =====================
 exports.list = (model, callback) ->
-  model.find {}, callback
+  models[model].find {}, callback
 
 exports.get = (model, id, callback) ->
-  model.findById id, propagate callback, (data) ->
+  models[model].findById id, propagate callback, (data) ->
     callback((if !data? then "No such id"), data)
 
 exports.del = (model, id, callback) ->
-  model.findById id, propagate callback, (d) ->
+  models[model].findById id, propagate callback, (d) ->
     if !d?
       callback "No such id"
     else
       d.remove (err) ->
         callback err, if !err then d
 
-exports.put = (model, id, data, callback) ->
+exports.put = (modelName, id, data, callback) ->
+  model = models[modelName]
   inputFields = Object.keys data
   validField = Object.keys(model.schema.paths)
 
@@ -59,7 +58,7 @@ exports.put = (model, id, data, callback) ->
       callback(err, if err then null else d)
 
 exports.post = (model, data, callback) ->
-  new model(data).save callback
+  new models[model](data).save callback
 
 
 
@@ -67,12 +66,12 @@ exports.post = (model, data, callback) ->
 # ===========
 exports.postSub = (model, data, outer, id, callback) ->
   data[outer] = id
-  new model(data).save callback
+  new models[model](data).save callback
 
 exports.listSub = (model, outer, id, callback) ->
   filter = {}
   filter[outer] = id
-  model.find filter, callback
+  models[model].find filter, callback
 
 
 
@@ -147,8 +146,87 @@ exports.defModel = (name, owners, spec) ->
 exports.models = models
 
 
+exports.getOwners = (modelName) ->
+  paths = models[modelName].schema.paths
+  outers = Object.keys(paths).filter((x) -> paths[x].options['x-owner']).map (x) ->
+    plur: paths[x].options.ref
+    sing: x
+  outers
+
+exports.getManyToMany = (modelName) ->
+  paths = models[modelName].schema.paths
+  manyToMany = Object.keys(paths).filter((x) -> Array.isArray paths[x].options.type).map (x) ->
+    ref: paths[x].options.type[0].ref
+    name: x
+  manyToMany
 
 
+
+
+
+
+# checking that nullable relations are set to values that exist
+nullablesValidation = (schema) -> (next) ->
+
+  self = this
+  paths = schema.paths
+  outers = Object.keys(paths).filter((x) -> paths[x].options.type == ObjectId && typeof paths[x].options.ref == 'string' && !paths[x].options['x-owner']).map (x) ->
+    plur: paths[x].options.ref
+    sing: x
+    validation: paths[x].options['x-validation']
+
+  # setting to null is always ok
+  nonNullOuters = outers.filter (x) -> self[x.sing]?
+
+  async.forEach nonNullOuters, (o, callback) ->
+    exports.get o.plur, self[o.sing], (err, data) ->
+      if err || !data
+        callback(new Error("Invalid pointer"))
+      else if o.validation
+        o.validation self, data, (err) ->
+          callback(if err then new Error(err))
+      else
+        callback()
+  , next
+
+
+preRemoveCascadeNonNullable = (owner, id, next) ->
+
+  ownedModels = Object.keys(models).map (modelName) ->
+    paths = models[modelName].schema.paths
+    Object.keys(paths).filter((x) -> paths[x].options.type == ObjectId && paths[x].options.ref == owner.modelName && paths[x].options['x-owner']).map (x) ->
+      name: modelName
+      field: x
+
+  flattenedModels = _.flatten ownedModels
+
+  async.forEach flattenedModels, (mod, callback) ->
+    exports.listSub mod.name, mod.field, id, (err, data) ->
+      async.forEach data, (item, callback) ->
+        item.remove callback
+      , callback
+  , next
+
+
+
+preRemoveCascadeNullable = (owner, id, next) ->
+
+  ownedModels = Object.keys(models).map (modelName) ->
+    paths = models[modelName].schema.paths
+    Object.keys(paths).filter((x) -> paths[x].options.type == ObjectId && paths[x].options.ref == owner.modelName && !paths[x].options['x-owner']).map (x) ->
+      name: modelName
+      field: x
+
+  flattenedModels = _.flatten ownedModels
+
+  async.forEach flattenedModels, (mod, callback) ->
+    exports.listSub mod.name, mod.field, id, (err, data) ->
+      async.forEach data, (item, callback) ->
+        item[mod.field] = null
+        item.save()
+        callback()
+      , callback
+  , next
 
 
 
@@ -158,70 +236,6 @@ exports.models = models
 exports.exec = () ->
 
 
-
-
-  # checking that nullable relations are set to values that exist
-  nullablesValidation = (schema) -> (next) ->
-
-    self = this
-    paths = schema.paths
-    outers = Object.keys(paths).filter((x) -> paths[x].options.type == ObjectId && typeof paths[x].options.ref == 'string' && !paths[x].options['x-owner']).map (x) ->
-      plur: paths[x].options.ref
-      sing: x
-      validation: paths[x].options['x-validation']
-
-    # setting to null is always ok
-    nonNullOuters = outers.filter (x) -> self[x.sing]?
-
-    async.forEach nonNullOuters, (o, callback) ->
-      exports.get models[o.plur], self[o.sing], (err, data) ->
-        if err || !data
-          callback(new Error("Invalid pointer"))
-        else if o.validation
-          o.validation self, data, (err) ->
-            callback(if err then new Error(err))
-        else
-          callback()
-    , next
-
-
-  preRemoveCascadeNonNullable = (owner, id, next) ->
-
-    ownedModels = Object.keys(models).map (modelName) ->
-      paths = models[modelName].schema.paths
-      Object.keys(paths).filter((x) -> paths[x].options.type == ObjectId && paths[x].options.ref == owner.modelName && paths[x].options['x-owner']).map (x) ->
-        name: modelName
-        field: x
-
-    flattenedModels = _.flatten ownedModels
-
-    async.forEach flattenedModels, (mod, callback) ->
-      exports.listSub models[mod.name], mod.field, id, (err, data) ->
-        async.forEach data, (item, callback) ->
-          item.remove callback
-        , callback
-    , next
-
-
-
-  preRemoveCascadeNullable = (owner, id, next) ->
-
-    ownedModels = Object.keys(models).map (modelName) ->
-      paths = models[modelName].schema.paths
-      Object.keys(paths).filter((x) -> paths[x].options.type == ObjectId && paths[x].options.ref == owner.modelName && !paths[x].options['x-owner']).map (x) ->
-        name: modelName
-        field: x
-
-    flattenedModels = _.flatten ownedModels
-
-    async.forEach flattenedModels, (mod, callback) ->
-      exports.listSub models[mod.name], mod.field, id, (err, data) ->
-        async.forEach data, (item, callback) ->
-          item[mod.field] = null
-          item.save()
-          callback()
-        , callback
-    , next
 
 
 
