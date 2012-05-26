@@ -56,7 +56,7 @@ defTest = (settings) ->
         callback()
 
     conf.forEach (item) ->
-      name = "not a real test"
+      name = "Request method " + item.method.toUpperCase()
 
       if item.method == 'res'
         name = item.args[0]
