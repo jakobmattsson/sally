@@ -1,7 +1,14 @@
 should = require 'should'
+_ = require 'underscore'
 helpers = require './testhelpers'
 query = (text) -> helpers.query(text, { origin: 'http://localhost:3000' })
-save = (name) -> (data) -> this[name] = data._id
+save = (name) -> (data) -> this[name] = data.id
+
+
+
+defaultContact = (attrs) ->
+  _.extend({ company: null, email: '', phone: '', name: '', notes: '', id: null }, attrs)
+
 
 
 query('No resource')
@@ -10,10 +17,64 @@ query('No resource')
 .run()
 
 
+
+query('No id')
+.get('/companies/123456781234567812345678')
+.err(400, 'No such id')
+.run()
+
+
+query('Testing so invalid IDs return the same error message as nonexisting IDs')
+.get('/companies/1234')
+.err(400, 'No such id')
+.run()
+
+
+
 query('Creating companies')
 .post('/companies')
-.res('Created company', (data) -> data.should.have.keys ['_id', 'notes', 'name'] )
+.res('Created company', (data) -> data.should.have.keys ['id', 'notes', 'name', 'address'])
 .run()
+
+
+
+query('Attempting to save nonexisting field')
+.post('/companies')
+.res('Created company', save 'company')
+.put('/companies/#{company}', { nonExistingField: 'something', another: 2 })
+.err(400, "Invalid fields: nonExistingField, another")
+.run()
+
+
+
+query('Ensure that PUT-operations are atomic')
+.post('/companies')
+.res('Created company', save 'company')
+.put('/companies/#{company}', { notes: 'original notes' })
+.put('/companies/#{company}', { notes: 'real data', foobar: 'fake data' })
+.err(400, "Invalid fields: foobar")
+.get('/companies/#{company}')
+.res('Getting the original data', (data) -> data.notes.should.eql 'original notes')
+.run()
+
+
+
+query('Attempting to override id')
+.post('/companies')
+.res('Created company', save 'company')
+.put('/companies/#{company}', { id: '123456781234567812345678' })
+.err(400)
+.run()
+
+
+
+query('Attempting to override _id')
+.post('/companies')
+.res('Created company', save 'company')
+.put('/companies/#{company}', { _id: '123456781234567812345678' })
+.err(400)
+.run()
+
 
 
 query('Cascading delete')
@@ -36,6 +97,8 @@ query('Cascading delete')
 .res('Getting contacts again', (data) -> data.length.should.eql @contacts + 1)
 .del('/companies/#{company}')
 .get('/companies/#{company}')
+.err(400, 'No such id')
+.del('/companies/#{company}')
 .err(400, 'No such id')
 .get('/companies/#{company}/calls')
 .res('Calls once again', (data) -> data.length.should.eql 0)
@@ -79,11 +142,6 @@ query('Meeting pointing to a valid call or nothing')
 
 
 
-
-
-
-
-
 query('Nulling foreign keys when pointed item is removed')
 .post('/companies')
 .res('Created company', save 'company')
@@ -104,3 +162,35 @@ query('Nulling foreign keys when pointed item is removed')
 
 
 
+query('Create many-to-many relation')
+.post('/companies').res('Created company', save 'company')
+.post('/companies/#{company}/contacts').res('Created first contact', save 'contact1')
+.post('/companies/#{company}/contacts').res('Created second contact', save 'contact2')
+.post('/companies/#{company}/meetings').res('Created meeting', save 'meeting')
+.post('/meetings/#{meeting}/attendees/#{contact1}')
+.res('Settings first contact to meeting', (data) -> data.should.eql {})
+.post('/attendees/#{contact2}/meetings/#{meeting}')
+.res('Settings second contact to meeting', (data) -> data.should.eql {})
+.get('/meetings/#{meeting}/attendees')
+.res('Getting all meeting attendees', (data) -> data.should.eql [
+  defaultContact({ company: @company, id: @contact1 })
+  defaultContact({ company: @company, id: @contact2 })
+])
+.get('/attendees/#{contact1}/meetings')
+.res('Getting the meetings from an attendant', (data) -> data.should.eql [{
+  attendees: [@contact1, @contact2]
+  company: @company
+  notes: ''
+  id: @meeting
+}])
+.del('/meetings/#{meeting}/attendees/#{contact1}')
+.res('Removed contact from meeting', (data) -> data.id.should.eql @contact1)
+.del('/attendees/#{contact2}/meetings/#{meeting}')
+.res('Removed meeting from contact', (data) -> data.id.should.eql @meeting)
+.get('/companies/#{company}/contacts')
+.res('All contacts should still be in the db', (data) -> data.length.should.eql 2)
+.get('/companies/#{company}/meetings')
+.res('All meetings should still be in the db', (data) -> data.length.should.eql 1)
+.get('/meetings/#{meeting}/attendees')
+.res('Getting all meeting attendees', (data) -> data.should.eql [])
+.run()

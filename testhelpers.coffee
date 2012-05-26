@@ -14,7 +14,7 @@ defTest = (settings) ->
       obj
 
   rep = (str) ->
-    str.replace /#{([0-9a-zA-Z_]*)}/, (all, exp) ->
+    str.replace /#{([0-9a-zA-Z_]*)}/g, (all, exp) ->
       state[exp]
 
   obj.run = (done) ->
@@ -24,9 +24,10 @@ defTest = (settings) ->
       if item.method == 'post' || item.method == 'del' || item.method == 'get' || item.method == 'put'
         postData = item.args[1] || {} if item.method == 'post' || item.method == 'put'
         postData = postData.call(state) if typeof postData == 'function'
+        finalUrl = settings.origin + rep(item.args[0])
 
         request {
-          url: settings.origin + rep(item.args[0])
+          url: finalUrl
           method: if item.method == 'del' then 'delete' else item.method
           json: postData
         }, (err, res, body) ->
@@ -40,8 +41,10 @@ defTest = (settings) ->
           callback()
 
       if item.method == 'res'
-        should.not.exist lastError
-        item.args[1].call(state, lastRes) if item.args[1]
+        if lastError
+          should.fail("Expected an OK, but got error", lastError)
+        else
+          item.args[1].call(state, lastRes) if item.args[1]
         callback()
 
       if item.method == 'err'
@@ -49,12 +52,17 @@ defTest = (settings) ->
           should.fail()
         else
           lastError.statusCode.should.eql item.args[0]
-          lastError.body.err.should.eql item.args[1]
+          lastError.body.err.should.eql item.args[1] if item.args.length > 1
         callback()
 
     conf.forEach (item) ->
-      name = if item.method == 'res' then item.args[0] else "Not a real test"
-      name = if item.method == 'err' then item.args[0] + ": " + item.args[1] else "Not a real test"
+      name = "not a real test"
+
+      if item.method == 'res'
+        name = item.args[0]
+      if item.method == 'err'
+        name = item.args[0] + ": " + item.args[1]
+
       it name, (done) -> callb item, done
 
   obj

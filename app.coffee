@@ -1,31 +1,55 @@
 # Many-to-many relations
-# Tar man bort ett call så ska det möte som hör till det call:et få sin referens nullad.
-
-# Förhindra att man uppdaterar IDn
-# Jag vill att id-fältet heter "id" istället för "_id"
 
 # Authentication
 
 # Making a super simple GUI (just tables)
 # Cross-domain: CORS
+# JSONP-friendly
 # Getting it to run properly on nodejitsu, with their mongodb
 
 # Måste kunna skriva "pre"- och "post"-middleware här i denna filen. För tex auth.
 
+# Nested data structures (tänk prowikes översättningar)
+
+# Hur gör man en meta-request (för att få veta valideringar, relationer etc) på bästa sätt?
+
+# Many-to-many:
+# * vilka kontakter var på mötet?
+# * vilken kontakt ringde jag?
+# * vilka av våra anställda var det som ringde samtalet eller gick på mötet?
+
+# LIST meetings/1234/contacts
+# LIST calls/1234/contacts
+
+# POST meetings/1234/contacts/567
+# DEL meetings/1234/contacts/567
+
+# Det kan absolut få finnas data i den här relationen. Den kan man sätta med POST, uppdatera med PUT och läsa med GET som vanligt
 
 apa = require './core'
-defModel = apa.defModel
+model = apa.defModel
+ObjectId = apa.ObjectId
 
 
-defModel 'companies', {}
+model 'companies', {}
   name:
     type: String
     default: ''
   notes:
     type: String
     default: ''
+  address:
+    street:
+      type: String
+      default: ''
+    city:
+      type: String
+      default: ''
+    country:
+      type: String
+      default: ''
 
-defModel 'projects', { company: 'companies' }
+model 'projects', { company: 'companies' }
   description:
     type: String
     default: ''
@@ -33,23 +57,28 @@ defModel 'projects', { company: 'companies' }
     type: Number
     default: null
 
-defModel 'calls', { company: 'companies' }
+model 'calls', { company: 'companies' }
   notes:
     type: String
     default: ''
 
-defModel 'meetings', { company: 'companies' }
+model 'meetings', { company: 'companies' }
   notes:
     type: String
     default: ''
+  attendees: [{
+    type: ObjectId
+    ref: 'contacts'
+  }]
   origin:
     ref: 'calls'
     'x-validation': (meeting, call, callback) ->
       if meeting.company.toString() != call.company.toString()
-        callback new Error 'The origin call does not belong to the same company as the meeting'
+        callback 'The origin call does not belong to the same company as the meeting'
       callback()
 
-defModel 'contacts', { company: 'companies' }
+
+model 'contacts', { company: 'companies' }
   notes:
     type: String
     default: ''
