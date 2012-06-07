@@ -9,6 +9,11 @@ save = (name) -> (data) -> this[name] = data.id
 defaultContact = (attrs) ->
   _.extend({ company: null, email: '', phone: '', name: '', notes: '', id: null }, attrs)
 
+query('Root')
+.get('/')
+.res('Get root', (data) -> data.should.eql { roots: ['companies'], verbs: [] })
+.run()
+
 
 
 query('No resource')

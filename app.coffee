@@ -26,10 +26,13 @@
 
 # Det kan absolut få finnas data i den här relationen. Den kan man sätta med POST, uppdatera med PUT och läsa med GET som vanligt
 
+db = require './db'
 apa = require './core'
-model = apa.defModel
-ObjectId = apa.ObjectId
 
+api = db.create()
+
+model = api.defModel
+ObjectId = api.ObjectId
 
 model 'companies', {}
   name:
@@ -93,4 +96,5 @@ model 'contacts', { company: 'companies' }
     default: ''
 
 
-apa.exec()
+api.connect 'mongodb://localhost/sally2'
+apa.exec(api)

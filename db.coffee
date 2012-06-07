@@ -4,246 +4,247 @@ mongoose = require 'mongoose'
 mongojs = require 'mongojs'
 ObjectId = mongoose.Schema.ObjectId
 
-mongoose.connect 'mongodb://localhost/sally'
-db = mongojs.connect 'mongodb://localhost/sally', ['meetings', 'companies', 'contacts', 'projects', 'calls'] # fult att hårdkoda collections
 
-propagate = (callback, f) ->
-  (err, args...) ->
-    if err
-      callback(err)
-    else
-      f.apply(this, args)
+exports.create = (databaseUrl) ->
 
-model = (name, schema) ->
-  ss = new mongoose.Schema schema,
-    strict: true
-  mongoose.model name, ss
+  db = null
+  api = {}
+  models = {}
+  api.ObjectId = ObjectId
 
-
-
-
-# The five base methods
-# =====================
-exports.list = (model, callback) ->
-  models[model].find {}, callback
-
-exports.get = (model, id, callback) ->
-  models[model].findById id, propagate callback, (data) ->
-    callback((if !data? then "No such id"), data)
-
-exports.del = (model, id, callback) ->
-  models[model].findById id, propagate callback, (d) ->
-    if !d?
-      callback "No such id"
-    else
-      d.remove (err) ->
-        callback err, if !err then d
-
-exports.put = (modelName, id, data, callback) ->
-  model = models[modelName]
-  inputFields = Object.keys data
-  validField = Object.keys(model.schema.paths)
-
-  invalidFields = _.difference(inputFields, validField)
-
-  if invalidFields.length > 0
-    callback("Invalid fields: " + invalidFields.join(', '))
-    return
-
-  model.findById id, propagate callback, (d) ->
-    inputFields.forEach (key) ->
-      d[key] = data[key]
-
-    d.save (err) ->
-      callback(err, if err then null else d)
-
-exports.post = (model, data, callback) ->
-  new models[model](data).save callback
-
-
-
-# Sub-methods
-# ===========
-exports.postSub = (model, data, outer, id, callback) ->
-  data[outer] = id
-  new models[model](data).save callback
-
-exports.listSub = (model, outer, id, callback) ->
-  filter = {}
-  filter[outer] = id
-  models[model].find filter, callback
-
-
-
-
-
-# The many-to-many methods
-# ========================
-exports.delMany = (primaryModel, primaryId, propertyName, secondaryModel, secondaryId, callback) ->
-  models[primaryModel].findById primaryId, propagate callback, (data) ->
-    pull = {}
-    pull[propertyName] = secondaryId
-    conditions = { _id: primaryId }
-    update = { $pull: pull }
-    options = { }
-    models[primaryModel].update conditions, update, options, (err, numAffected) ->
-      callback(err)
-
-exports.postMany = (primaryModel, primaryId, propertyName, secondaryModel, secondaryId, callback) ->
-  models[primaryModel].findById primaryId, propagate callback, (data) ->
-    models[secondaryModel].findById secondaryId, propagate callback, () ->
-
-      if -1 == data[propertyName].indexOf secondaryId
-        data[propertyName].push secondaryId
-
-      data.save (err) ->
-        callback(err, {})
-
-exports.getMany = (primaryModel, primaryId, propertyName, callback) ->
-  models[primaryModel]
-  .findOne({ _id: primaryId })
-  .populate(propertyName)
-  .run (err, story) ->
-    callback err, story[propertyName]
-
-exports.getManyBackwards = (model, id, propertyName, callback) ->
-  filter = {}
-  filter[propertyName] = new db.bson.ObjectID(id.toString())
-
-  db[model].find filter, (err, result) ->
-    callback(err, result)
-
-
-
-
-
-
-
-
-
-models = {}
-
-exports.ObjectId = ObjectId;
-
-exports.defModel = (name, owners, spec) ->
-
-  Object.keys(owners).forEach (ownerName) ->
-    spec[ownerName] =
-      type: ObjectId
-      ref: owners[ownerName]
-      'x-owner': true
-
-  Object.keys(spec).forEach (fieldName) ->
-    if spec[fieldName].ref?
-      spec[fieldName].type = ObjectId
-
-  models[name] = model name, spec
-
-
-
-
-
-exports.models = models
-
-
-exports.getOwners = (modelName) ->
-  paths = models[modelName].schema.paths
-  outers = Object.keys(paths).filter((x) -> paths[x].options['x-owner']).map (x) ->
-    plur: paths[x].options.ref
-    sing: x
-  outers
-
-exports.getManyToMany = (modelName) ->
-  paths = models[modelName].schema.paths
-  manyToMany = Object.keys(paths).filter((x) -> Array.isArray paths[x].options.type).map (x) ->
-    ref: paths[x].options.type[0].ref
-    name: x
-  manyToMany
-
-
-
-
-
-
-# checking that nullable relations are set to values that exist
-nullablesValidation = (schema) -> (next) ->
-
-  self = this
-  paths = schema.paths
-  outers = Object.keys(paths).filter((x) -> paths[x].options.type == ObjectId && typeof paths[x].options.ref == 'string' && !paths[x].options['x-owner']).map (x) ->
-    plur: paths[x].options.ref
-    sing: x
-    validation: paths[x].options['x-validation']
-
-  # setting to null is always ok
-  nonNullOuters = outers.filter (x) -> self[x.sing]?
-
-  async.forEach nonNullOuters, (o, callback) ->
-    exports.get o.plur, self[o.sing], (err, data) ->
-      if err || !data
-        callback(new Error("Invalid pointer"))
-      else if o.validation
-        o.validation self, data, (err) ->
-          callback(if err then new Error(err))
+  propagate = (callback, f) ->
+    (err, args...) ->
+      if err
+        callback(err)
       else
-        callback()
-  , next
+        f.apply(this, args)
+
+  model = (name, schema) ->
+    ss = new mongoose.Schema schema,
+      strict: true
+    mongoose.model name, ss
+
+  api.isValidId = (id) ->
+    try
+      mongoose.mongo.ObjectID(id)
+      true
+    catch ex
+      false
 
 
-preRemoveCascadeNonNullable = (owner, id, next) ->
+  # Connecting to db
+  # ================
+  api.connect = (databaseUrl) ->
+    mongoose.connect databaseUrl
+    db = mongojs.connect databaseUrl, api.getModels()
 
-  ownedModels = Object.keys(models).map (modelName) ->
+
+  # The five base methods
+  # =====================
+  api.list = (model, callback) ->
+    models[model].find {}, callback
+
+  api.get = (model, id, callback) ->
+    models[model].findById id, propagate callback, (data) ->
+      callback((if !data? then "No such id"), data)
+
+  api.del = (model, id, callback) ->
+    models[model].findById id, propagate callback, (d) ->
+      if !d?
+        callback "No such id"
+      else
+        d.remove (err) ->
+          callback err, if !err then d
+
+  api.put = (modelName, id, data, callback) ->
+    model = models[modelName]
+    inputFields = Object.keys data
+    validField = Object.keys(model.schema.paths)
+
+    invalidFields = _.difference(inputFields, validField)
+
+    if invalidFields.length > 0
+      callback("Invalid fields: " + invalidFields.join(', '))
+      return
+
+    model.findById id, propagate callback, (d) ->
+      inputFields.forEach (key) ->
+        d[key] = data[key]
+
+      d.save (err) ->
+        callback(err, if err then null else d)
+
+  api.post = (model, data, callback) ->
+    new models[model](data).save callback
+
+
+
+  # Sub-methods
+  # ===========
+  api.postSub = (model, data, outer, id, callback) ->
+    data[outer] = id
+    new models[model](data).save callback
+
+  api.listSub = (model, outer, id, callback) ->
+    filter = {}
+    filter[outer] = id
+    models[model].find filter, callback
+
+
+
+
+
+  # The many-to-many methods
+  # ========================
+  api.delMany = (primaryModel, primaryId, propertyName, secondaryModel, secondaryId, callback) ->
+    models[primaryModel].findById primaryId, propagate callback, (data) ->
+      pull = {}
+      pull[propertyName] = secondaryId
+      conditions = { _id: primaryId }
+      update = { $pull: pull }
+      options = { }
+      models[primaryModel].update conditions, update, options, (err, numAffected) ->
+        callback(err)
+
+  api.postMany = (primaryModel, primaryId, propertyName, secondaryModel, secondaryId, callback) ->
+    models[primaryModel].findById primaryId, propagate callback, (data) ->
+      models[secondaryModel].findById secondaryId, propagate callback, () ->
+
+        if -1 == data[propertyName].indexOf secondaryId
+          data[propertyName].push secondaryId
+
+        data.save (err) ->
+          callback(err, {})
+
+  api.getMany = (primaryModel, primaryId, propertyName, callback) ->
+    models[primaryModel]
+    .findOne({ _id: primaryId })
+    .populate(propertyName)
+    .run (err, story) ->
+      callback err, story[propertyName]
+
+  api.getManyBackwards = (model, id, propertyName, callback) ->
+    filter = {}
+    filter[propertyName] = new db.bson.ObjectID(id.toString())
+
+    db[model].find filter, (err, result) ->
+      callback(err, result)
+
+
+
+
+
+
+
+
+
+
+
+  api.defModel = (name, owners, spec) ->
+
+    Object.keys(owners).forEach (ownerName) ->
+      spec[ownerName] =
+        type: ObjectId
+        ref: owners[ownerName]
+        'x-owner': true
+
+    Object.keys(spec).forEach (fieldName) ->
+      if spec[fieldName].ref?
+        spec[fieldName].type = ObjectId
+
+    models[name] = model name, spec
+
+    models[name].schema.pre 'save', nullablesValidation(models[name].schema)
+    models[name].schema.pre 'remove', (next) -> preRemoveCascadeNonNullable(models[name], this._id.toString(), next)
+    models[name].schema.pre 'remove', (next) -> preRemoveCascadeNullable(models[name], this._id.toString(), next)
+
+
+
+
+
+
+
+  api.getOwners = (modelName) ->
     paths = models[modelName].schema.paths
-    Object.keys(paths).filter((x) -> paths[x].options.type == ObjectId && paths[x].options.ref == owner.modelName && paths[x].options['x-owner']).map (x) ->
-      name: modelName
-      field: x
+    outers = Object.keys(paths).filter((x) -> paths[x].options['x-owner']).map (x) ->
+      plur: paths[x].options.ref
+      sing: x
+    outers
 
-  flattenedModels = _.flatten ownedModels
-
-  async.forEach flattenedModels, (mod, callback) ->
-    exports.listSub mod.name, mod.field, id, (err, data) ->
-      async.forEach data, (item, callback) ->
-        item.remove callback
-      , callback
-  , next
-
-
-
-preRemoveCascadeNullable = (owner, id, next) ->
-
-  ownedModels = Object.keys(models).map (modelName) ->
+  api.getManyToMany = (modelName) ->
     paths = models[modelName].schema.paths
-    Object.keys(paths).filter((x) -> paths[x].options.type == ObjectId && paths[x].options.ref == owner.modelName && !paths[x].options['x-owner']).map (x) ->
-      name: modelName
-      field: x
+    manyToMany = Object.keys(paths).filter((x) -> Array.isArray paths[x].options.type).map (x) ->
+      ref: paths[x].options.type[0].ref
+      name: x
+    manyToMany
 
-  flattenedModels = _.flatten ownedModels
 
-  async.forEach flattenedModels, (mod, callback) ->
-    exports.listSub mod.name, mod.field, id, (err, data) ->
-      async.forEach data, (item, callback) ->
-        item[mod.field] = null
-        item.save()
-        callback()
-      , callback
-  , next
+  api.getModels = () ->
+    Object.keys(models)
 
 
 
+  # checking that nullable relations are set to values that exist
+  nullablesValidation = (schema) -> (next) ->
+
+    self = this
+    paths = schema.paths
+    outers = Object.keys(paths).filter((x) -> paths[x].options.type == ObjectId && typeof paths[x].options.ref == 'string' && !paths[x].options['x-owner']).map (x) ->
+      plur: paths[x].options.ref
+      sing: x
+      validation: paths[x].options['x-validation']
+
+    # setting to null is always ok
+    nonNullOuters = outers.filter (x) -> self[x.sing]?
+
+    async.forEach nonNullOuters, (o, callback) ->
+      api.get o.plur, self[o.sing], (err, data) ->
+        if err || !data
+          callback(new Error("Invalid pointer"))
+        else if o.validation
+          o.validation self, data, (err) ->
+            callback(if err then new Error(err))
+        else
+          callback()
+    , next
+
+
+  preRemoveCascadeNonNullable = (owner, id, next) ->
+
+    ownedModels = Object.keys(models).map (modelName) ->
+      paths = models[modelName].schema.paths
+      Object.keys(paths).filter((x) -> paths[x].options.type == ObjectId && paths[x].options.ref == owner.modelName && paths[x].options['x-owner']).map (x) ->
+        name: modelName
+        field: x
+
+    flattenedModels = _.flatten ownedModels
+
+    async.forEach flattenedModels, (mod, callback) ->
+      api.listSub mod.name, mod.field, id, (err, data) ->
+        async.forEach data, (item, callback) ->
+          item.remove callback
+        , callback
+    , next
 
 
 
-exports.exec = () ->
+  preRemoveCascadeNullable = (owner, id, next) ->
 
+    ownedModels = Object.keys(models).map (modelName) ->
+      paths = models[modelName].schema.paths
+      Object.keys(paths).filter((x) -> paths[x].options.type == ObjectId && paths[x].options.ref == owner.modelName && !paths[x].options['x-owner']).map (x) ->
+        name: modelName
+        field: x
 
+    flattenedModels = _.flatten ownedModels
 
+    async.forEach flattenedModels, (mod, callback) ->
+      api.listSub mod.name, mod.field, id, (err, data) ->
+        async.forEach data, (item, callback) ->
+          item[mod.field] = null
+          item.save()
+          callback()
+        , callback
+    , next
 
-
-  Object.keys(models).map((x) -> models[x]).forEach (model) ->
-    model.schema.pre 'save', nullablesValidation(model.schema)
-
-  Object.keys(models).map((x) -> models[x]).forEach (model) ->
-    model.schema.pre 'remove', (next) -> preRemoveCascadeNonNullable(model, this._id.toString(), next)
-
-  Object.keys(models).map((x) -> models[x]).forEach (model) ->
-    model.schema.pre 'remove', (next) -> preRemoveCascadeNullable(model, this._id.toString(), next)
+  api

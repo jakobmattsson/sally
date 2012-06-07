@@ -1,21 +1,10 @@
 _ = require 'underscore'
-mongoose = require 'mongoose'
-mongojs = require 'mongojs'
 express = require 'express'
-ObjectId = mongoose.Schema.ObjectId
 
 app = express.createServer()
 app.use express.bodyParser()
 
-
-
-db = require('./db')
-
-exports.defModel = db.defModel
-exports.ObjectId = db.ObjectId
-
-exports.exec = () ->
-  db.exec()
+exports.exec = (db) ->
 
   def = (method, route, mid, callback) ->
     if !callback?
@@ -33,12 +22,10 @@ exports.exec = () ->
         res.json(massageResult(JSON.parse(JSON.stringify(data))))
 
   validateId = (req, res, next) ->
-    try
-      mongoose.mongo.ObjectID(req.params.id)
-    catch ex
+    if db.isValidId(req.params.id)
+      next()
+    else
       res.json { err: 'No such id' }, 400 # duplication. can this be extracted out?
-      return
-    next()
 
   massageOne = (x) ->
     x.id = x._id
@@ -47,10 +34,9 @@ exports.exec = () ->
 
   massageResult = (r2) -> if Array.isArray r2 then r2.map massageOne else massageOne r2
 
+  db.getModels().forEach (modelName) ->
 
-  Object.keys(db.models).forEach (modelName) ->
-
-    outers = db.getOwners(modelName)
+    owners = db.getOwners(modelName)
     manyToMany = db.getManyToMany(modelName)
 
     def 'get', "/#{modelName}", (req, res) ->
@@ -65,16 +51,16 @@ exports.exec = () ->
     def 'put', "/#{modelName}/:id", validateId, (req, res) ->
       db.put modelName, req.params.id, req.body, responder(res)
 
-    if outers.length == 0
+    if owners.length == 0
       def 'post', "/#{modelName}", (req, res) ->
         db.post modelName, req.body, responder(res)
 
-    outers.forEach (outer) ->
-      def 'get', "/#{outer.plur}/:id/#{modelName}", validateId, (req, res) ->
-        db.listSub modelName, outer.sing, req.params.id, responder(res)
+    owners.forEach (owner) ->
+      def 'get', "/#{owner.plur}/:id/#{modelName}", validateId, (req, res) ->
+        db.listSub modelName, owner.sing, req.params.id, responder(res)
 
-      def 'post', "/#{outer.plur}/:id/#{modelName}", validateId, (req, res) ->
-        db.postSub modelName, req.body, outer.sing, req.params.id, responder(res)
+      def 'post', "/#{owner.plur}/:id/#{modelName}", validateId, (req, res) ->
+        db.postSub modelName, req.body, owner.sing, req.params.id, responder(res)
 
     manyToMany.forEach (many) ->
       def 'post', "/#{modelName}/:id/#{many.name}/:other", (req, res) ->
@@ -101,7 +87,7 @@ exports.exec = () ->
 
   app.get '/', (req, res) ->
     res.json
-      roots: ['companies'] # generera istället
+      roots: db.getModels().filter((name) -> db.getOwners(name).length == 0)
       verbs: []
 
   app.all '*', (req, res) ->
