@@ -135,12 +135,26 @@ exports.create = (databaseUrl) ->
 
 
 
+  specTransform = (tgt, src, keys) ->
+    keys.forEach (key) ->
+      if !src[key].type?
+        throw "must assign a type: " + JSON.stringify(keys)
+      if src[key].type == 'nested'
+        tgt[key] = {}
+        specTransform(tgt[key], src[key], _.without(Object.keys(src[key]), 'type'))
+      if src[key].type == 'string'
+        tgt[key] = { type: String, default: src[key].default }
+      if src[key].type == 'number'
+        tgt[key] = { type: Number, default: src[key].default }
+      if src[key].type == 'hasOne'
+        tgt[key] = { ref: src[key].model, 'x-validation': src[key].validation }
+      if src[key].type == 'hasMany'
+        tgt[key] = [{ type: ObjectId, ref: src[key].model }]
 
+  api.defModel = (name, owners, inspec) ->
 
-
-
-
-  api.defModel = (name, owners, spec) ->
+    spec = {}
+    specTransform(spec, inspec, Object.keys(inspec))
 
     Object.keys(owners).forEach (ownerName) ->
       spec[ownerName] =

@@ -30,76 +30,50 @@ db = require './db'
 apa = require './core'
 
 api = db.create()
-
 model = api.defModel
-ObjectId = api.ObjectId
 
 
 model 'accounts', { }
-  name:
-    type: String
-    default: ''
+  name: { type: 'string', default: '' }
 
 model 'companies', { account: 'accounts' }
-  name:
-    type: String
-    default: ''
-  notes:
-    type: String
-    default: ''
-  address:
-    street:
-      type: String
-      default: ''
-    city:
-      type: String
-      default: ''
-    country:
-      type: String
-      default: ''
+  name: { type: 'string', default: '' }
+  notes: { type: 'string', default: '' }
+  address: {
+    type: 'nested',
+    street: { type: 'string', default: '' }
+    city: { type: 'string', default: '' }
+    country: { type: 'string', default: '' }
+  }
 
 model 'projects', { company: 'companies' }
-  description:
-    type: String
-    default: ''
-  value:
-    type: Number
-    default: null
+  description: { type: 'string', default: '' }
+  value: { type: 'number', default: null }
 
 model 'calls', { company: 'companies' }
-  notes:
-    type: String
-    default: ''
+  notes: { type: 'string', default: '' }
 
 model 'meetings', { company: 'companies' }
-  notes:
-    type: String
-    default: ''
-  attendees: [{
-    type: ObjectId
-    ref: 'contacts'
-  }]
+  notes: { type: 'string', default: '' }
+
+  # This is a many-to-many relationship. The name of the attribute must be unique among
+  # models and other many-to-many relationships as it will be used as a url-component.
+  attendees: { type: 'hasMany', model: 'contacts' }
+
   origin:
-    ref: 'calls'
-    'x-validation': (meeting, call, callback) ->
+    type: 'hasOne'
+    model: 'calls'
+    validation: (meeting, call, callback) ->
       if meeting.company.toString() != call.company.toString()
         callback 'The origin call does not belong to the same company as the meeting'
       callback()
 
-
 model 'contacts', { company: 'companies' }
-  notes:
-    type: String
-    default: ''
-  name:
-    type: String
-    default: ''
-  phone:
-    type: String
-    default: ''
-  email:
-    type: String
-    default: ''
+  notes: { type: 'string', default: '' }
+  name:  { type: 'string', default: '' }
+  phone: { type: 'string', default: '' }
+  email: { type: 'string', default: '' }
+
 
 
 api.connect 'mongodb://localhost/sally2'
