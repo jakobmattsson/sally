@@ -34,7 +34,13 @@ api = db.create()
 model = api.defModel
 ObjectId = api.ObjectId
 
-model 'companies', {}
+
+model 'accounts', { }
+  name:
+    type: String
+    default: ''
+
+model 'companies', { account: 'accounts' }
   name:
     type: String
     default: ''

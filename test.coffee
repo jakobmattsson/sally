@@ -11,7 +11,7 @@ defaultContact = (attrs) ->
 
 query('Root')
 .get('/')
-.res('Get root', (data) -> data.should.eql { roots: ['companies'], verbs: [] })
+.res('Get root', (data) -> data.should.eql { roots: ['accounts'], verbs: [] })
 .run()
 
 
@@ -37,14 +37,18 @@ query('Testing so invalid IDs return the same error message as nonexisting IDs')
 
 
 query('Creating companies')
-.post('/companies')
-.res('Created company', (data) -> data.should.have.keys ['id', 'notes', 'name', 'address'])
+.post('/accounts')
+.res('Created account', save 'account')
+.post('/accounts/#{account}/companies')
+.res('Created company', (data) -> data.should.have.keys ['id', 'notes', 'name', 'address', 'account'])
 .run()
 
 
 
 query('Attempting to save nonexisting field')
-.post('/companies')
+.post('/accounts')
+.res('Created account', save 'account')
+.post('/accounts/#{account}/companies')
 .res('Created company', save 'company')
 .put('/companies/#{company}', { nonExistingField: 'something', another: 2 })
 .err(400, "Invalid fields: nonExistingField, another")
@@ -53,7 +57,9 @@ query('Attempting to save nonexisting field')
 
 
 query('Ensure that PUT-operations are atomic')
-.post('/companies')
+.post('/accounts')
+.res('Created account', save 'account')
+.post('/accounts/#{account}/companies')
 .res('Created company', save 'company')
 .put('/companies/#{company}', { notes: 'original notes' })
 .put('/companies/#{company}', { notes: 'real data', foobar: 'fake data' })
@@ -65,7 +71,9 @@ query('Ensure that PUT-operations are atomic')
 
 
 query('Attempting to override id')
-.post('/companies')
+.post('/accounts')
+.res('Created account', save 'account')
+.post('/accounts/#{account}/companies')
 .res('Created company', save 'company')
 .put('/companies/#{company}', { id: '123456781234567812345678' })
 .err(400)
@@ -74,7 +82,9 @@ query('Attempting to override id')
 
 
 query('Attempting to override _id')
-.post('/companies')
+.post('/accounts')
+.res('Created account', save 'account')
+.post('/accounts/#{account}/companies')
 .res('Created company', save 'company')
 .put('/companies/#{company}', { _id: '123456781234567812345678' })
 .err(400)
@@ -83,7 +93,9 @@ query('Attempting to override _id')
 
 
 query('Cascading delete')
-.post('/companies', {})
+.post('/accounts')
+.res('Created account', save 'account')
+.post('/accounts/#{account}/companies')
 .res('Creating company', save 'company')
 .get('/calls')
 .res('Getting calls', (data) -> @calls = data.length)
@@ -116,14 +128,19 @@ query('Cascading delete')
 .run()
 
 
+
 query('Meeting pointing to a valid call or nothing')
-.post('/companies')
+.post('/accounts')
+.res('Created account', save 'account')
+.post('/accounts/#{account}/companies')
 .res('Created company', save 'company')
 .post('/companies/#{company}/calls')
 .res('Created call', save 'call1')
 .post('/companies/#{company}/calls')
 .res('Created call', save 'call2')
-.post('/companies')
+.post('/accounts')
+.res('Created account', save 'account')
+.post('/accounts/#{account}/companies')
 .res('Created company', save 'company2')
 .post('/companies/#{company2}/calls')
 .res('Created call', save 'call3')
@@ -148,7 +165,9 @@ query('Meeting pointing to a valid call or nothing')
 
 
 query('Nulling foreign keys when pointed item is removed')
-.post('/companies')
+.post('/accounts')
+.res('Created account', save 'account')
+.post('/accounts/#{account}/companies')
 .res('Created company', save 'company')
 .post('/companies/#{company}/calls')
 .res('Created call', save 'call1')
@@ -168,7 +187,10 @@ query('Nulling foreign keys when pointed item is removed')
 
 
 query('Create many-to-many relation')
-.post('/companies').res('Created company', save 'company')
+.post('/accounts')
+.res('Created account', save 'account')
+.post('/accounts/#{account}/companies')
+.res('Created company', save 'company')
 .post('/companies/#{company}/contacts').res('Created first contact', save 'contact1')
 .post('/companies/#{company}/contacts').res('Created second contact', save 'contact2')
 .post('/companies/#{company}/meetings').res('Created meeting', save 'meeting')
