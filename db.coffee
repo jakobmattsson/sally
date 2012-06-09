@@ -151,9 +151,12 @@ exports.create = (databaseUrl) ->
       if src[key].type == 'hasMany'
         tgt[key] = [{ type: ObjectId, ref: src[key].model }]
 
-  api.defModel = (name, owners, inspec) ->
+  api.defModel = (name, conf) ->
 
     spec = {}
+    owners = conf.owners || {}
+    inspec = conf.fields || {}
+    auth = conf.auth || (() -> {})
     specTransform(spec, inspec, Object.keys(inspec))
 
     Object.keys(owners).forEach (ownerName) ->
@@ -175,8 +178,17 @@ exports.create = (databaseUrl) ->
 
 
 
-
-
+  api.getMetaFields = (modelName) ->
+    typeMap =
+      ObjectID: 'string'
+      String: 'string'
+      Number: 'number'
+    paths = models[modelName].schema.paths
+    metaFields = Object.keys(paths).map (key) ->
+      name: (if key == '_id' then 'id' else key)
+      readonly: key == '_id' || !!paths[key].options['x-owner']
+      type: typeMap[paths[key].instance] || 'unknown'
+    _.sortBy(metaFields, 'name')
 
   api.getOwners = (modelName) ->
     paths = models[modelName].schema.paths
@@ -184,6 +196,13 @@ exports.create = (databaseUrl) ->
       plur: paths[x].options.ref
       sing: x
     outers
+
+  api.getOwnedModels = (ownerModelName) ->
+    _.flatten Object.keys(models).map (modelName) ->
+      paths = models[modelName].schema.paths
+      Object.keys(paths).filter((x) -> paths[x].options.type == ObjectId && paths[x].options.ref == ownerModelName && paths[x].options['x-owner']).map (x) ->
+        name: modelName
+        field: x
 
   api.getManyToMany = (modelName) ->
     paths = models[modelName].schema.paths
@@ -222,16 +241,9 @@ exports.create = (databaseUrl) ->
           callback()
     , next
 
-
   preRemoveCascadeNonNullable = (owner, id, next) ->
 
-    ownedModels = Object.keys(models).map (modelName) ->
-      paths = models[modelName].schema.paths
-      Object.keys(paths).filter((x) -> paths[x].options.type == ObjectId && paths[x].options.ref == owner.modelName && paths[x].options['x-owner']).map (x) ->
-        name: modelName
-        field: x
-
-    flattenedModels = _.flatten ownedModels
+    flattenedModels = api.getOwnedModels(owner.modelName)
 
     async.forEach flattenedModels, (mod, callback) ->
       api.listSub mod.name, mod.field, id, (err, data) ->

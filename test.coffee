@@ -221,3 +221,20 @@ query('Create many-to-many relation')
 .get('/meetings/#{meeting}/attendees')
 .res('Getting all meeting attendees', (data) -> data.should.eql [])
 .run()
+
+
+query('Test meta owns')
+.get('/meta/accounts').res('Meta for accounts', (data) -> data.owns.should.eql ['companies'])
+.get('/meta/companies').res('Meta for companies', (data) -> data.owns.should.eql ['projects', 'calls', 'meetings', 'contacts'])
+.get('/meta/calls').res('Meta for calls', (data) -> data.owns.should.eql [])
+.get('/meta/meetings').res('Meta for meetings', (data) -> data.owns.should.eql [])
+.get('/meta/projects').res('Meta for projects', (data) -> data.owns.should.eql [])
+.get('/meta/contacts').res('Meta for contacts', (data) -> data.owns.should.eql [])
+.run()
+
+
+query('Test meta fields')
+.get('/meta/accounts').res('Meta for accounts', (data) -> data.fields.should.eql [{ name: 'id', type: 'string', readonly: true }, { name: 'name', type: 'string', readonly: false }])
+.get('/meta/projects').res('Meta for projects', (data) -> data.fields.should.eql [{ name: 'company', type: 'string', readonly: true }, { name: 'description', type: 'string', readonly: false }, { name: 'id', type: 'string', readonly: true }, { name: 'value', type: 'number', readonly: false }])
+.get('/meta/companies').res('Meta for projects', (data) -> data.fields.should.eql [{ name: 'account', type: 'string', readonly: true }, { name: 'address', type: 'string', readonly: false }, { name: 'id', type: 'string', readonly: true }, { name: 'name', type: 'string', readonly: false }, { name: 'notes', type: 'string', readonly: false }])
+.run()

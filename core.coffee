@@ -14,18 +14,23 @@ exports.exec = (db) ->
     # console.log method, route
     app[method](route, mid, callback)
 
+  respond = (res, data, result) ->
+    res.header 'Access-Control-Allow-Origin', '*'
+    res.header 'Access-Control-Allow-Methods', 'POST, GET, OPTIONS, DELETE, PUT'
+    res.json data, (result || 200)
+
   responder = (res) ->
     (err, data) ->
       if err
-        res.json { err: err.toString() }, 400
+        respond res, { err: err.toString() }, 400
       else
-        res.json(massageResult(JSON.parse(JSON.stringify(data))))
+        respond res, massageResult(JSON.parse(JSON.stringify(data)))
 
   validateId = (req, res, next) ->
     if db.isValidId(req.params.id)
       next()
     else
-      res.json { err: 'No such id' }, 400 # duplication. can this be extracted out?
+      respond res, { err: 'No such id' }, 400 # duplication. can this be extracted out?
 
   massageOne = (x) ->
     x.id = x._id
@@ -50,6 +55,12 @@ exports.exec = (db) ->
 
     def 'put', "/#{modelName}/:id", validateId, (req, res) ->
       db.put modelName, req.params.id, req.body, responder(res)
+
+    def 'get', "/meta/#{modelName}", (req, res) ->
+      responder(res)(null, {
+        owns: db.getOwnedModels(modelName).map((x) -> x.name)
+        fields:db.getMetaFields(modelName)
+      })
 
     if owners.length == 0
       def 'post', "/#{modelName}", (req, res) ->
@@ -86,11 +97,14 @@ exports.exec = (db) ->
             responder(res)(err || innerErr, data)
 
   app.get '/', (req, res) ->
-    res.json
+    respond res,
       roots: db.getModels().filter((name) -> db.getOwners(name).length == 0)
       verbs: []
 
+  app.options '*', (req, res) ->
+    respond(res, {}, 200)
+
   app.all '*', (req, res) ->
-    res.json { err: 'No such resource' }, 400
+    respond res, { err: 'No such resource' }, 400
 
   app.listen 3000
