@@ -55,8 +55,6 @@ model = api.defModel
 # tillät vem som helst att göra det.
 
 api.getUserFromDb = (db, req, callback) ->
-  mongojs = require 'mongojs'
-
   if !req.headers.authorization
     callback(null, false)
     return
@@ -218,4 +216,3 @@ api.connect 'mongodb://localhost/sally4'
 apa.exec(api)
 
 
-# account <- company <- meetings/calls/contacts/projects
