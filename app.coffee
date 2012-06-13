@@ -212,7 +212,7 @@ mod =
 Object.keys(mod).forEach (modelName) ->
   model modelName, mod[modelName]
 
-api.connect 'mongodb://localhost/sally5'
+api.connect 'mongodb://nodejitsu:49730ea26cbb782388174dfa29393a9f@flame.mongohq.com:27085/nodejitsudb30731655679'
 
 # Bootstrap an admin if there are none
 api.list 'admins', { }, (err, data) ->
