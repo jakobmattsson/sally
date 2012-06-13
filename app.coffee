@@ -4,6 +4,13 @@
 # Den här redundansen kan sedan användas för att avgöra om man har tillgång till objektet eller ej
 
 
+# Borde testa att indirekta ägare också kopieras över när man lägger till ett nytt löv i heirarkin
+
+
+# Natural IDs. En kolumn som är sträng eller integer och unik över hela modellen kan användas som nyckel.
+# Borde finnas en option för att göra just det.
+# Först och främst behöver jag en option för att säga att en kolumn ska vara unik.
+
 # Many-to-many relations
 
 # Making a super simple GUI (just tables)
@@ -31,75 +38,184 @@
 
 db = require './db'
 apa = require './core'
+async = require 'async'
 
 api = db.create()
 model = api.defModel
 
 
-# Man måste definiera hur man får ut en user
-# Borde gå att köra antingen med token ELLER med basicAuth. börja med basic.
+# Nu
+# * Tillämpa auth i alla routes (kommer kräva att testerna patchas upp)
+
+# man för att göra detta behöver man väl olika säkerhetsnivåer?
+# tänk tex på att skapa ett account, det ska man kunna göra även om man inte är inloggad
+# (kanske inte i denna appen, men föreställ situationen först åtminstone)
+
+# jag skulle skapat en special-route, som skapade en användare och ett konto som en atomisk operation och som
+# tillät vem som helst att göra det.
+
+api.getUserFromDb = (db, req, callback) ->
+  mongojs = require 'mongojs'
+
+  if !req.headers.authorization
+    callback(null, false)
+    return
+
+  code = req.headers.authorization.slice(6)
+  au = new Buffer(code, 'base64').toString('ascii').split(':')
+  username = au[0]
+  password = au[1]
+
+  # gör en sökning i admin-tabellen
+  #models[model].find filter, callback
+  # prova sedan att skapa användare etc i gränssnittet
+
+
+  async.map ['admins', 'users'], (collection, callback) ->
+    db[collection].find { username: username, password: password }, callback
+  , (err, results) ->
+    if err
+      callback(null, null)
+      return
+
+    if results[1].length > 0
+      callback(null, { account: results[1].account })
+      return
+
+    if results[0].length > 0
+      callback(null, { admin: true })
+      return
+
+    if username == 'admin' && password == 'admin'
+      callback(null, { admin: true })
+      return
+
+    callback(null, null)
+
+  # db.admins.find { username: username, password: password }, (err, docs) ->
+  #   console.log "res admins", docs
+  #
+  # db.users.find { username: username, password: password }, (err, docs) ->
+  #   console.log "res users", docs
+  #
+  # if username == 'admin' && password == 'admin'
+  #   callback(null, { admin: true })
+  #   return
+  #
+  # # just nu funkar inte auth i harvester.
+  # # det beror nog på att det körs med ajax. Kan man svara på 401 med ajax?
+  #
+  #
+  # # gör en sökning i users-tabellen
+  #
+  # if username == 'jakob' && password == 'test'
+  #   callback(null, { account: '4fd2f6c81cfc8b8ab4000003' })
+  #   return
+  #
+  # callback(null, null)
+
+
+defaultAuth = (targetProperty) -> (user) ->
+  # null betyder: autha dig!
+  # {} betyder: du får tillgång till alla
+  # annat objekt betyder: du får tillgång till det som filtret tillåter
+
+  targetProperty = targetProperty || 'account'
+
+  return null if !user?
+  return {} if user.admin
+
+  filter = {}
+  filter[targetProperty] = user.account
+
+  return filter if user.account
+  return null
 
 
 
-# givet ett user-objekt (vad det innehåller plockas fram centralt), skapa ett filter som kan användas mot kollektionen
-model 'accounts',
-  auth: (user) ->
-    if user.admin then {} else { id: user.account }
-  fields:
-    name: { type: 'string', default: '' }
+mod =
+  accounts:
+    auth: defaultAuth('_id') # jobbigt att det behöver vara "_id" istället för "id"
+    fields:
+      name: { type: 'string', default: '' }
 
-model 'companies',
-  owners:
-    account: 'accounts'
-  auth: (user) ->
-    if user.admin then {} else { account: user.account }
-  fields:
-    name: { type: 'string', default: '' }
-    notes: { type: 'string', default: '' }
-    address: { type: 'string', default: '' }
+  admins:
+    auth: (user) -> if user? && user.admin then {} else null
+    fields:
+      username: { type: 'string', default: '' }
+      password: { type: 'string', default: '' }
 
-# inför redundans för att ha tillgång till account här också
-model 'projects',
-  owners:
-    company: 'companies'
-  fields:
-    description: { type: 'string', default: '' }
-    value: { type: 'number', default: null }
+  users:
+    auth: defaultAuth() # implementera korrekt. vem kan se alla? vem kan ändra data? vem kan ändra lösenord?
+    owners:
+      account: 'accounts'
+    fields:
+      username: { type: 'string', default: '' }
+      password: { type: 'string', default: '' }
+      accountAdmin: { type: 'boolean', default: '' } # boolska typer!
 
-# inför redundsans för att ha tillgång till account här också
-model 'calls',
-  owners:
-    company: 'companies'
-  fields:
-    notes: { type: 'string', default: '' }
+  companies:
+    auth: defaultAuth()
+    owners:
+      account: 'accounts'
+    fields:
+      name: { type: 'string', default: '' }
+      notes: { type: 'string', default: '' }
+      address: { type: 'string', default: '' }
 
-model 'meetings',
-  owners:
-    company: 'companies'
-  fields:
-    notes: { type: 'string', default: '' }
+  projects:
+    auth: defaultAuth()
+    owners:
+      company: 'companies'
+    fields:
+      description: { type: 'string', default: '' }
+      value: { type: 'number', default: null }
 
-    # This is a many-to-many relationship. The name of the attribute must be unique among
-    # models and other many-to-many relationships as it will be used as a url-component.
-    attendees: { type: 'hasMany', model: 'contacts' }
+  calls:
+    auth: defaultAuth()
+    owners:
+      company: 'companies'
+    fields:
+      notes: { type: 'string', default: '' }
 
-    origin:
-      type: 'hasOne'
-      model: 'calls'
-      validation: (meeting, call, callback) ->
-        if meeting.company.toString() != call.company.toString()
-          callback 'The origin call does not belong to the same company as the meeting'
-        callback()
+  meetings:
+    auth: defaultAuth()
+    owners:
+      company: 'companies'
+    fields:
+      notes: { type: 'string', default: '' }
 
-model 'contacts',
-  owners:
-    company: 'companies'
-  fields:
-    notes: { type: 'string', default: '' }
-    name:  { type: 'string', default: '' }
-    phone: { type: 'string', default: '' }
-    email: { type: 'string', default: '' }
+      # This is a many-to-many relationship. The name of the attribute must be unique among
+      # models and other many-to-many relationships as it will be used as a url-component.
+      # Write a check for it and write a test that proves it.
+      attendees: { type: 'hasMany', model: 'contacts' }
 
+      origin:
+        type: 'hasOne'
+        model: 'calls'
+        validation: (meeting, call, callback) ->
+          if meeting.company.toString() != call.company.toString()
+            callback 'The origin call does not belong to the same company as the meeting'
+          callback()
+
+  contacts:
+    auth: defaultAuth()
+    owners:
+      company: 'companies'
+    fields:
+      notes: { type: 'string', default: '' }
+      name:  { type: 'string', default: '' }
+      phone: { type: 'string', default: '' }
+      email: { type: 'string', default: '' }
+
+
+
+
+Object.keys(mod).forEach (modelName) ->
+  model modelName, mod[modelName]
 
 api.connect 'mongodb://localhost/sally4'
 apa.exec(api)
+
+
+# account <- company <- meetings/calls/contacts/projects

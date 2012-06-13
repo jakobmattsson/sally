@@ -15,14 +15,20 @@ exports.exec = (db) ->
     app[method](route, mid, callback)
 
   respond = (res, data, result) ->
-    res.header 'Access-Control-Allow-Origin', '*'
+    res.header 'Access-Control-Allow-Origin', 'http://localhost:7000'
+    res.header 'Access-Control-Allow-Credentials', 'true'
+    res.header 'Access-Control-Allow-Headers', 'Authorization'
     res.header 'Access-Control-Allow-Methods', 'POST, GET, OPTIONS, DELETE, PUT'
     res.json data, (result || 200)
 
   responder = (res) ->
     (err, data) ->
       if err
-        respond res, { err: err.toString() }, 400
+        if err.unauthorized
+          res.header 'WWW-Authenticate', 'Basic realm="sally"'
+          respond res, { err: "unauthed" }, 401
+        else
+          respond res, { err: err.toString() }, 400
       else
         respond res, massageResult(JSON.parse(JSON.stringify(data)))
 
@@ -45,7 +51,11 @@ exports.exec = (db) ->
     manyToMany = db.getManyToMany(modelName)
 
     def 'get', "/#{modelName}", (req, res) ->
-      db.list modelName, responder(res)
+      db.getFilter req, modelName, (err, filter) ->
+        if !filter?
+          responder(res)({ unauthorized: true })
+        else
+          db.list modelName, filter, responder(res)
 
     def 'get', "/#{modelName}/:id", validateId, (req, res) ->
       db.get modelName, req.params.id, responder(res)

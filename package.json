@@ -18,7 +18,7 @@
   },
   "subdomain": "sally",
   "scripts": {
-    "test": "mocha --compilers coffee:coffee-script test.coffee",
+    "test": "mocha --compilers coffee:coffee-script -b test.coffee",
     "start": "coffee app.coffee"
   }
 }

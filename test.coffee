@@ -11,7 +11,30 @@ defaultContact = (attrs) ->
 
 query('Root')
 .get('/')
-.res('Get root', (data) -> data.should.eql { roots: ['accounts'], verbs: [] })
+.res('Get root', (data) -> data.should.eql { roots: ['accounts', 'admins'], verbs: [] })
+.run()
+
+
+
+query('No resource')
+.get('/accounts')
+.err(401, 'unauthed')
+.run()
+
+
+
+query('No resource')
+.auth('invalid', 'invalid')
+.get('/accounts')
+.err(401, 'unauthed')
+.run()
+
+
+
+query('No resource')
+.auth('admin', 'admin')
+.get('/accounts')
+.res('Got accounts')
 .run()
 
 
@@ -20,7 +43,6 @@ query('No resource')
 .get('/foobar')
 .err(400, 'No such resource')
 .run()
-
 
 
 query('No id')
@@ -93,6 +115,7 @@ query('Attempting to override _id')
 
 
 query('Cascading delete')
+.auth('admin', 'admin')
 .post('/accounts')
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -223,8 +246,9 @@ query('Create many-to-many relation')
 .run()
 
 
+
 query('Test meta owns')
-.get('/meta/accounts').res('Meta for accounts', (data) -> data.owns.should.eql ['companies'])
+.get('/meta/accounts').res('Meta for accounts', (data) -> data.owns.should.eql ['users', 'companies'])
 .get('/meta/companies').res('Meta for companies', (data) -> data.owns.should.eql ['projects', 'calls', 'meetings', 'contacts'])
 .get('/meta/calls').res('Meta for calls', (data) -> data.owns.should.eql [])
 .get('/meta/meetings').res('Meta for meetings', (data) -> data.owns.should.eql [])
@@ -234,7 +258,7 @@ query('Test meta owns')
 
 
 query('Test meta fields')
-.get('/meta/accounts').res('Meta for accounts', (data) -> data.fields.should.eql [{ name: 'id', type: 'string', readonly: true }, { name: 'name', type: 'string', readonly: false }])
-.get('/meta/projects').res('Meta for projects', (data) -> data.fields.should.eql [{ name: 'company', type: 'string', readonly: true }, { name: 'description', type: 'string', readonly: false }, { name: 'id', type: 'string', readonly: true }, { name: 'value', type: 'number', readonly: false }])
-.get('/meta/companies').res('Meta for projects', (data) -> data.fields.should.eql [{ name: 'account', type: 'string', readonly: true }, { name: 'address', type: 'string', readonly: false }, { name: 'id', type: 'string', readonly: true }, { name: 'name', type: 'string', readonly: false }, { name: 'notes', type: 'string', readonly: false }])
+.get('/meta/accounts').res('Meta fields for accounts', (data) -> data.fields.should.eql [{ name: 'id', type: 'string', readonly: true }, { name: 'name', type: 'string', readonly: false }])
+.get('/meta/projects').res('Meta fields for projects', (data) -> data.fields.should.eql [{ name: 'account', type: 'string', readonly: true }, { name: 'company', type: 'string', readonly: true }, { name: 'description', type: 'string', readonly: false }, { name: 'id', type: 'string', readonly: true }, { name: 'value', type: 'number', readonly: false }])
+.get('/meta/companies').res('Meta fields for companies', (data) -> data.fields.should.eql [{ name: 'account', type: 'string', readonly: true }, { name: 'address', type: 'string', readonly: false }, { name: 'id', type: 'string', readonly: true }, { name: 'name', type: 'string', readonly: false }, { name: 'notes', type: 'string', readonly: false }])
 .run()

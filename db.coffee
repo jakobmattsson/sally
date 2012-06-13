@@ -32,6 +32,15 @@ exports.create = (databaseUrl) ->
       false
 
 
+  api.getFilter = (conf, model, callback) ->
+    api.getUserFromDb db, conf, (err, user) ->
+      if err
+        callback err
+        return
+      filter = models[model]._auth(user)
+      callback null, filter
+
+
   # Connecting to db
   # ================
   api.connect = (databaseUrl) ->
@@ -41,14 +50,26 @@ exports.create = (databaseUrl) ->
 
   # The five base methods
   # =====================
-  api.list = (model, callback) ->
-    models[model].find {}, callback
+  api.list = (model, filter, callback) ->
+    if !callback?
+      callback = filter
+      filter = {}
 
-  api.get = (model, id, callback) ->
+    models[model].find filter, callback
+
+  api.get = (model, id, filter, callback) ->
+    if !callback?
+      callback = filter
+      filter = {}
+
     models[model].findById id, propagate callback, (data) ->
       callback((if !data? then "No such id"), data)
 
-  api.del = (model, id, callback) ->
+  api.del = (model, id, filter, callback) ->
+    if !callback?
+      callback = filter
+      filter = {}
+
     models[model].findById id, propagate callback, (d) ->
       if !d?
         callback "No such id"
@@ -56,7 +77,11 @@ exports.create = (databaseUrl) ->
         d.remove (err) ->
           callback err, if !err then d
 
-  api.put = (modelName, id, data, callback) ->
+  api.put = (modelName, id, data, filter, callback) ->
+    if !callback?
+      callback = filter
+      filter = {}
+
     model = models[modelName]
     inputFields = Object.keys data
     validField = Object.keys(model.schema.paths)
@@ -74,7 +99,11 @@ exports.create = (databaseUrl) ->
       d.save (err) ->
         callback(err, if err then null else d)
 
-  api.post = (model, data, callback) ->
+  api.post = (model, data, filter, callback) ->
+    if !callback?
+      callback = filter
+      filter = {}
+
     new models[model](data).save callback
 
 
@@ -159,17 +188,28 @@ exports.create = (databaseUrl) ->
     auth = conf.auth || (() -> {})
     specTransform(spec, inspec, Object.keys(inspec))
 
+    # set owners
     Object.keys(owners).forEach (ownerName) ->
       spec[ownerName] =
         type: ObjectId
         ref: owners[ownerName]
         'x-owner': true
 
+    # set indirect owners (SHOULD use the full list of models, rather than depend on that indirect owners have been created already)
+    Object.keys(owners).forEach (ownerName) ->
+      paths = models[owners[ownerName]].schema.paths
+      Object.keys(paths).filter((p) -> paths[p].options['x-owner']).forEach (p) ->
+        spec[p] =
+          type: ObjectId
+          ref: paths[p].options.ref
+          'x-indirect-owner': true
+
     Object.keys(spec).forEach (fieldName) ->
       if spec[fieldName].ref?
         spec[fieldName].type = ObjectId
 
     models[name] = model name, spec
+    models[name]._auth = auth
 
     models[name].schema.pre 'save', nullablesValidation(models[name].schema)
     models[name].schema.pre 'remove', (next) -> preRemoveCascadeNonNullable(models[name], this._id.toString(), next)
@@ -186,7 +226,7 @@ exports.create = (databaseUrl) ->
     paths = models[modelName].schema.paths
     metaFields = Object.keys(paths).map (key) ->
       name: (if key == '_id' then 'id' else key)
-      readonly: key == '_id' || !!paths[key].options['x-owner']
+      readonly: key == '_id' || !!paths[key].options['x-owner'] || !!paths[key].options['x-indirect-owner']
       type: typeMap[paths[key].instance] || 'unknown'
     _.sortBy(metaFields, 'name')
 

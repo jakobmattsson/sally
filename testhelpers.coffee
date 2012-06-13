@@ -7,8 +7,9 @@ defTest = (settings) ->
   state = {}
   lastRes = null
   lastError = null
+  authHeader = null
 
-  ['post', 'get', 'del', 'put', 'err', 'res'].forEach (method) ->
+  ['post', 'get', 'del', 'put', 'err', 'res', 'auth'].forEach (method) ->
     obj[method] = (args...) ->
       conf.push { method: method, args: args }
       obj
@@ -26,8 +27,13 @@ defTest = (settings) ->
         postData = postData.call(state) if typeof postData == 'function'
         finalUrl = settings.origin + rep(item.args[0])
 
+        headers = {}
+        if authHeader
+          headers.authorization = authHeader
+
         request {
           url: finalUrl
+          headers: headers
           method: if item.method == 'del' then 'delete' else item.method
           json: postData
         }, (err, res, body) ->
@@ -39,6 +45,13 @@ defTest = (settings) ->
             lastRes = null
             lastError = if err then err else { statusCode: res.statusCode, body: parsedBody }
           callback()
+
+      if item.method == 'auth'
+        if item.args.length == 0
+          authHeader = null
+        else
+          authHeader = "Basic " + new Buffer(item.args[0] + ":" + item.args[1]).toString('base64')
+        callback()
 
       if item.method == 'res'
         if lastError
@@ -72,3 +85,6 @@ exports.query = (title, data) ->
   describe title, () ->
     x = defTest data
   x
+
+
+# Basic YWRtaW46YWRtaW4=
