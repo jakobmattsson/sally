@@ -212,7 +212,16 @@ mod =
 Object.keys(mod).forEach (modelName) ->
   model modelName, mod[modelName]
 
-api.connect 'mongodb://localhost/sally4'
-apa.exec(api)
+api.connect 'mongodb://localhost/sally5'
 
-
+# Bootstrap an admin if there are none
+api.list 'admins', { }, (err, data) ->
+  if data.length > 0
+    apa.exec api
+  else
+    api.post 'admins', { username: 'admin', password: 'admin' }, (err) ->
+      if err
+        console.log(err)
+        process.exit(1)
+      else
+        apa.exec api
