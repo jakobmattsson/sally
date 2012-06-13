@@ -25,6 +25,7 @@
   ],
   "scripts": {
     "test": "mocha --compilers coffee:coffee-script -b test.coffee",
+    "deploy": "jitsu deploy",
     "start": "node starter.js"
   }
 }
