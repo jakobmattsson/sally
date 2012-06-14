@@ -262,3 +262,17 @@ query('Test meta fields')
 .get('/meta/projects').res('Meta fields for projects', (data) -> data.fields.should.eql [{ name: 'account', type: 'string', readonly: true }, { name: 'company', type: 'string', readonly: true }, { name: 'description', type: 'string', readonly: false }, { name: 'id', type: 'string', readonly: true }, { name: 'value', type: 'number', readonly: false }])
 .get('/meta/companies').res('Meta fields for companies', (data) -> data.fields.should.eql [{ name: 'account', type: 'string', readonly: true }, { name: 'address', type: 'string', readonly: false }, { name: 'id', type: 'string', readonly: true }, { name: 'name', type: 'string', readonly: false }, { name: 'notes', type: 'string', readonly: false }])
 .run()
+
+
+
+query('Creating users')
+.post('/accounts')
+.res('Created account', save 'account')
+.post('/accounts/#{account}/users')
+.res('Created user', (data) -> data.should.include { username: '', password: '', accountAdmin: false })
+.run()
+
+
+
+
+
