@@ -17,7 +17,7 @@
     "express": "2.5.x"
   },
   "devDependencies": {
-    "request": "2.9.x",
+    "trester": "0.1.x",
     "should": "0.6.x"
   },
   "subdomain": "sally",

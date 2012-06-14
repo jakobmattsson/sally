@@ -1,5 +1,5 @@
 should = require 'should'
-helpers = require './testhelpers'
+helpers = require 'trester'
 query = (text) -> helpers.query(text, { origin: 'http://localhost:3000' })
 save = (name) -> (data) -> this[name] = data.id
 
