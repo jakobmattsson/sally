@@ -171,17 +171,21 @@ exports.create = (databaseUrl) ->
     keys.forEach (key) ->
       if !src[key].type?
         throw "must assign a type: " + JSON.stringify(keys)
-      if src[key].type == 'nested'
+      else if src[key].type == 'nested'
         tgt[key] = {}
         specTransform(tgt[key], src[key], _.without(Object.keys(src[key]), 'type'))
-      if src[key].type == 'string'
+      else if src[key].type == 'string'
         tgt[key] = { type: String, default: src[key].default }
-      if src[key].type == 'number'
+      else if src[key].type == 'number'
         tgt[key] = { type: Number, default: src[key].default }
-      if src[key].type == 'hasOne'
+      else if src[key].type == 'boolean'
+        tgt[key] = { type: Boolean, default: src[key].default }
+      else if src[key].type == 'hasOne'
         tgt[key] = { ref: src[key].model, 'x-validation': src[key].validation }
-      if src[key].type == 'hasMany'
+      else if src[key].type == 'hasMany'
         tgt[key] = [{ type: ObjectId, ref: src[key].model }]
+      else
+        throw "Invalid type: " + src[key].type
 
   api.defModel = (name, conf) ->
 
