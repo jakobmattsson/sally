@@ -1,8 +1,13 @@
+nconf = require 'nconf'
 should = require 'should'
-helpers = require 'trester'
-query = (text) -> helpers.query(text, { origin: 'http://localhost:3000' })
+mongojs = require 'mongojs'
+trester = require 'trester'
+query = (text) -> trester.query(text, { origin: 'http://localhost:3000' })
 save = (name) -> (data) -> this[name] = data.id
 
+
+mongojs.connect('mongodb://localhost/sally').dropDatabase () ->
+  require('./app').run({}, trester.trigger)
 
 
 query('Root')
@@ -265,11 +270,42 @@ query('Test meta fields')
 query('Creating users')
 .post('/accounts')
 .res('Created account', save 'account')
-.post('/accounts/#{account}/users')
-.res('Created user', (data) -> data.should.include { username: '', password: '', accountAdmin: false })
+.post('/accounts/#{account}/users', { username: 'foo', password: 'baz' })
+.res('Created user', (data) -> data.should.include { username: 'foo', password: 'baz', accountAdmin: false })
 .run()
 
 
 
+query('Attempting to create another user with the same username')
+.post('/accounts')
+.res('Created account', save 'account')
+.post('/accounts/#{account}/users', { username: 'foo', password: 'baz' })
+.err(400, 'MongoError: E11000 duplicate key error index: sally1.users.$username_1  dup key: { : \"foo\" }')
+.run()
 
 
+
+query('Attempting to create user without username or password')
+.post('/accounts')
+.res('Created account', save 'account')
+.post('/accounts/#{account}/users')
+.err(400, 'ValidationError: Validator "required" failed for path password, Validator "required" failed for path username')
+.run()
+
+
+
+query('Setting a boolean type by passing in any truthy value')
+.post('/accounts')
+.res('Created account', save 'account')
+.post('/accounts/#{account}/users', { username: 'foobar', password: 'baz', accountAdmin: 'yes' })
+.res('Created user', (data) -> data.should.include { username: 'foobar', password: 'baz', accountAdmin: true })
+.run()
+
+
+
+query('Setting a boolean type by passing in any falsy value')
+.post('/accounts')
+.res('Created account', save 'account')
+.post('/accounts/#{account}/users', { username: 'foz', password: 'baz', accountAdmin: 0 })
+.res('Created user', (data) -> data.should.include { username: 'foz', password: 'baz', accountAdmin: false })
+.run()

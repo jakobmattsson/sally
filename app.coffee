@@ -122,9 +122,9 @@ mod =
     owners:
       account: 'accounts'
     fields:
-      username: { type: 'string', default: '' }
-      password: { type: 'string', default: '' }
-      accountAdmin: { type: 'boolean', default: '' } # boolska typer!
+      username: { type: 'string', required: true, unique: true }
+      password: { type: 'string', required: true }
+      accountAdmin: { type: 'boolean', default: false }
 
   companies:
     auth: defaultAuth()
@@ -187,35 +187,36 @@ Object.keys(mod).forEach (modelName) ->
   model modelName, mod[modelName]
 
 
+exports.run = (settings, callback) ->
 
+  nconf.env().argv().defaults
+    mongo: 'mongodb://localhost/sally'
+    NODE_ENV: 'development'
+    # port: 3000 (och 80 i nodejitsus env)
 
+  console.log("Starting up")
+  console.log("Environment mongo:", nconf.get('mongo'))
+  console.log("Environment NODE_ENV:", nconf.get('NODE_ENV'))
 
-nconf.env().argv().defaults
-  mongo: 'mongodb://localhost/sally'
-  NODE_ENV: 'development'
-  # port: 3000 (och 80 i nodejitsus env)
-
-console.log("Starting up")
-console.log("Environment mongo:", nconf.get('mongo'))
-console.log("Environment NODE_ENV:", nconf.get('NODE_ENV'))
-
-api.connect nconf.get('mongo'), (err) ->
-  if err
-    console.log "ERROR: Could not connect to db"
-    return
-
-  # Bootstrap an admin if there are none
-  api.list 'admins', { }, (err, data) ->
+  api.connect nconf.get('mongo'), (err) ->
     if err
-      console.log err
+      console.log "ERROR: Could not connect to db"
       return
 
-    if data.length > 0
-      apa.exec api
-    else
-      api.post 'admins', { username: 'admin', password: 'admin' }, (err) ->
-        if err
-          console.log(err)
-          process.exit(1)
-        else
-          apa.exec api
+    # Bootstrap an admin if there are none
+    api.list 'admins', { }, (err, data) ->
+      if err
+        console.log err
+        return
+
+      if data.length > 0
+        apa.exec api
+        callback()
+      else
+        api.post 'admins', { username: 'admin', password: 'admin' }, (err) ->
+          if err
+            console.log(err)
+            process.exit(1)
+          else
+            apa.exec api
+            callback()

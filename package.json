@@ -17,7 +17,7 @@
     "express": "2.5.x"
   },
   "devDependencies": {
-    "trester": "0.1.x",
+    "trester": "0.2.x",
     "should": "0.6.x"
   },
   "subdomain": "sally",
@@ -25,7 +25,7 @@
     "sally.jdevab.com"
   ],
   "scripts": {
-    "test": "mocha --compilers coffee:coffee-script -b test.coffee",
+    "test": "mocha -R list --compilers coffee:coffee-script -b test.coffee",
     "deploy": "jitsu deploy",
     "start": "node starter.js"
   }

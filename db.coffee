@@ -175,11 +175,20 @@ exports.create = (databaseUrl) ->
         tgt[key] = {}
         specTransform(tgt[key], src[key], _.without(Object.keys(src[key]), 'type'))
       else if src[key].type == 'string'
-        tgt[key] = { type: String, default: src[key].default }
+        tgt[key] = { type: String, required: !!src[key].required }
+        tgt[key].default = src[key].default if src[key].default?
+        tgt[key].index = src[key].index if src[key].index?
+        tgt[key].unique = src[key].unique if src[key].unique?
       else if src[key].type == 'number'
-        tgt[key] = { type: Number, default: src[key].default }
+        tgt[key] = { type: Number, required: !!src[key].required }
+        tgt[key].default = src[key].default if src[key].default?
+        tgt[key].index = src[key].index if src[key].index?
+        tgt[key].unique = src[key].unique if src[key].unique?
       else if src[key].type == 'boolean'
-        tgt[key] = { type: Boolean, default: src[key].default }
+        tgt[key] = { type: Boolean, required: !!src[key].required }
+        tgt[key].default = src[key].default if src[key].default?
+        tgt[key].index = src[key].index if src[key].index?
+        tgt[key].unique = src[key].unique if src[key].unique?
       else if src[key].type == 'hasOne'
         tgt[key] = { ref: src[key].model, 'x-validation': src[key].validation }
       else if src[key].type == 'hasMany'
