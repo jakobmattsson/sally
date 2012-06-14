@@ -69,11 +69,6 @@ api.getUserFromDb = (db, req, callback) ->
   username = au[0]
   password = au[1]
 
-  # gör en sökning i admin-tabellen
-  #models[model].find filter, callback
-  # prova sedan att skapa användare etc i gränssnittet
-
-
   async.map ['admins', 'users'], (collection, callback) ->
     db[collection].find { username: username, password: password }, callback
   , (err, results) ->
@@ -90,28 +85,6 @@ api.getUserFromDb = (db, req, callback) ->
       return
 
     callback(null, null)
-
-  # db.admins.find { username: username, password: password }, (err, docs) ->
-  #   console.log "res admins", docs
-  #
-  # db.users.find { username: username, password: password }, (err, docs) ->
-  #   console.log "res users", docs
-  #
-  # if username == 'admin' && password == 'admin'
-  #   callback(null, { admin: true })
-  #   return
-  #
-  # # just nu funkar inte auth i harvester.
-  # # det beror nog på att det körs med ajax. Kan man svara på 401 med ajax?
-  #
-  #
-  # # gör en sökning i users-tabellen
-  #
-  # if username == 'jakob' && password == 'test'
-  #   callback(null, { account: '4fd2f6c81cfc8b8ab4000003' })
-  #   return
-  #
-  # callback(null, null)
 
 
 defaultAuth = (targetProperty) -> (user) ->
