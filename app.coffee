@@ -39,6 +39,7 @@
 db = require './db'
 apa = require './core'
 async = require 'async'
+nconf = require 'nconf'
 
 api = db.create()
 model = api.defModel
@@ -212,10 +213,28 @@ mod =
 Object.keys(mod).forEach (modelName) ->
   model modelName, mod[modelName]
 
-api.connect 'mongodb://nodejitsu:49730ea26cbb782388174dfa29393a9f@flame.mongohq.com:27085/nodejitsudb30731655679'
+
+
+
+
+
+
+nconf.env().argv().defaults
+  mongo: 'mongodb://localhost/sally6',
+  NODE_ENV: 'development'
+
+console.log("Starting up")
+console.log("  mongo:", nconf.get('mongo'))
+console.log("  NODE_ENV:", nconf.get('NODE_ENV'))
+
+api.connect nconf.get('mongo')
 
 # Bootstrap an admin if there are none
 api.list 'admins', { }, (err, data) ->
+  if err
+    console.log err
+    return
+
   if data.length > 0
     apa.exec api
   else
