@@ -89,10 +89,6 @@ api.getUserFromDb = (db, req, callback) ->
       callback(null, { admin: true })
       return
 
-    if username == 'admin' && password == 'admin'
-      callback(null, { admin: true })
-      return
-
     callback(null, null)
 
   # db.admins.find { username: username, password: password }, (err, docs) ->
@@ -222,28 +218,31 @@ Object.keys(mod).forEach (modelName) ->
 
 
 nconf.env().argv().defaults
-  mongo: 'mongodb://localhost/sally6',
+  mongo: 'mongodb://localhost/sally'
   NODE_ENV: 'development'
   # port: 3000 (och 80 i nodejitsus env)
 
 console.log("Starting up")
-console.log("  mongo:", nconf.get('mongo'))
-console.log("  NODE_ENV:", nconf.get('NODE_ENV'))
+console.log("Environment mongo:", nconf.get('mongo'))
+console.log("Environment NODE_ENV:", nconf.get('NODE_ENV'))
 
-api.connect nconf.get('mongo')
-
-# Bootstrap an admin if there are none
-api.list 'admins', { }, (err, data) ->
+api.connect nconf.get('mongo'), (err) ->
   if err
-    console.log err
+    console.log "ERROR: Could not connect to db"
     return
 
-  if data.length > 0
-    apa.exec api
-  else
-    api.post 'admins', { username: 'admin', password: 'admin' }, (err) ->
-      if err
-        console.log(err)
-        process.exit(1)
-      else
-        apa.exec api
+  # Bootstrap an admin if there are none
+  api.list 'admins', { }, (err, data) ->
+    if err
+      console.log err
+      return
+
+    if data.length > 0
+      apa.exec api
+    else
+      api.post 'admins', { username: 'admin', password: 'admin' }, (err) ->
+        if err
+          console.log(err)
+          process.exit(1)
+        else
+          apa.exec api

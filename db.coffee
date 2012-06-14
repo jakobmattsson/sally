@@ -43,9 +43,12 @@ exports.create = (databaseUrl) ->
 
   # Connecting to db
   # ================
-  api.connect = (databaseUrl) ->
+  api.connect = (databaseUrl, callback) ->
     mongoose.connect databaseUrl
     db = mongojs.connect databaseUrl, api.getModels()
+    db[Object.keys(models)[0]].find (err) ->
+      callback(err)
+
 
 
   # The five base methods
