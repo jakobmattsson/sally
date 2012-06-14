@@ -11,8 +11,11 @@ exports.exec = (db) ->
       callback = mid
       mid = []
 
-    # console.log method, route
-    app[method](route, mid, callback)
+    func = app[method]
+    func.call app, route, mid, (req, res) ->
+      console.log(req.method, req.url)
+      callback(req, res)
+
 
   respond = (req, res, data, result) ->
     res.header 'Access-Control-Allow-Origin', req.headers.origin
@@ -106,15 +109,15 @@ exports.exec = (db) ->
           db.delMany modelName, req.params.id, many.name, many.ref, req.params.other, (innerErr) ->
             responder(req, res)(err || innerErr, data)
 
-  app.get '/', (req, res) ->
+  def 'get', '/', (req, res) ->
     respond req, res,
       roots: db.getModels().filter((name) -> db.getOwners(name).length == 0)
       verbs: []
 
-  app.options '*', (req, res) ->
+  def 'options', '*', (req, res) ->
     respond(req, res, {}, 200)
 
-  app.all '*', (req, res) ->
+  def 'all', '*', (req, res) ->
     respond req, res, { err: 'No such resource' }, 400
 
   app.listen 3000

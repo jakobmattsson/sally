@@ -1,3 +1,7 @@
+# Lägg till statiska filer, tex /favicon.ico
+
+
+
 # AUTHENTICATION
 # Ägarskap är aldrig föränderligt (detta gör många saker mycket lättare)
 # Förusatt att authentication alltid baseras på ägarskapsheirarkin så kan med fylla ut alla objekt med redundans
@@ -217,11 +221,10 @@ Object.keys(mod).forEach (modelName) ->
 
 
 
-
-
 nconf.env().argv().defaults
   mongo: 'mongodb://localhost/sally6',
   NODE_ENV: 'development'
+  # port: 3000 (och 80 i nodejitsus env)
 
 console.log("Starting up")
 console.log("  mongo:", nconf.get('mongo'))
