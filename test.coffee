@@ -1,13 +1,9 @@
-_ = require 'underscore'
 should = require 'should'
 helpers = require './testhelpers'
 query = (text) -> helpers.query(text, { origin: 'http://localhost:3000' })
 save = (name) -> (data) -> this[name] = data.id
 
 
-
-defaultContact = (attrs) ->
-  _.extend({ company: null, email: '', phone: '', name: '', notes: '', id: null }, attrs)
 
 query('Root')
 .get('/')
@@ -222,10 +218,11 @@ query('Create many-to-many relation')
 .post('/attendees/#{contact2}/meetings/#{meeting}')
 .res('Settings second contact to meeting', (data) -> data.should.eql {})
 .get('/meetings/#{meeting}/attendees')
-.res('Getting all meeting attendees', (data) -> data.should.eql [
-  defaultContact({ company: @company, id: @contact1 })
-  defaultContact({ company: @company, id: @contact2 })
-])
+.res('Getting all meeting attendees', (data) ->
+  data.should.have.lengthOf 2
+  data[0].should.include { company: @company, id: @contact1 }
+  data[1].should.include { company: @company, id: @contact2 }
+)
 .get('/attendees/#{contact1}/meetings')
 .res('Getting the meetings from an attendant', (data) -> data.should.eql [{
   attendees: [@contact1, @contact2]
