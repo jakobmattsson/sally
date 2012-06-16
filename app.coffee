@@ -113,11 +113,13 @@ valUniqueInModel = (model, property) -> (value, callback) ->
 mod =
   accounts:
     auth: defaultAuth('id')
+    authWrite: adminWrap (user) -> if user.accountAdmin then { id: user.account } else null
+    authCreate: adminWrap (user) -> null
     fields:
       name: { type: 'string', default: '' }
 
   admins:
-    auth: adminWrap((user) -> null)
+    auth: adminWrap (user) -> null
     fieldFilter: (user) -> ['password']
     fields:
       username:

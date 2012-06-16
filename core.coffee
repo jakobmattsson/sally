@@ -79,11 +79,19 @@ exports.exec = (db, getUserFromDb, mods) ->
     manyToMany = db.getManyToMany(modelName)
 
     midFilter = (type) -> (req, res, next) ->
+      authFuncs = {
+        read: mods[modelName].auth || ->
+        write: mods[modelName].authWrite
+        create: mods[modelName].authCreate
+      }
+      authFuncs.write ?= authFuncs.read
+      authFuncs.create ?= authFuncs.write
+
       getUserFromDb req, (err, user) ->
         if err
           callback err
           return
-        filter = mods[modelName].auth(user)
+        filter = authFuncs[type](user)
         if !filter?
           responder(req, res)({ unauthorized: true })
         else
