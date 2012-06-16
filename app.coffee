@@ -92,19 +92,12 @@ getUserFromDb = (req, callback) ->
 
 
 defaultAuth = (targetProperty) -> (user) ->
-  # null betyder: autha dig!
-  # {} betyder: du får tillgång till alla
-  # annat objekt betyder: du får tillgång till det som filtret tillåter
-
-  targetProperty = targetProperty || 'account'
-
+  # null means: you must authorize yourself
+  # {} means: you are allowed access to every object in the collection
+  # any other object means: you are allowed access to those objects matching the given object
   return null if !user?
   return {} if user.admin
-
-  filter = {}
-  filter[targetProperty] = user.account
-
-  return filter if user.account
+  return underline.makeObject(targetProperty || 'account', user.account) if user.account
   return null
 
 
