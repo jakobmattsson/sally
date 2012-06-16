@@ -155,7 +155,7 @@ exports.run = (settings, callback) ->
   nconf.env().argv().defaults
     mongo: 'mongodb://localhost/sally'
     NODE_ENV: 'development'
-    # port: 3000 (och 80 i nodejitsus env)
+    port: 3000
 
   console.log("Starting up")
   console.log("Environment mongo:", nconf.get('mongo'))
@@ -188,7 +188,7 @@ exports.run = (settings, callback) ->
                 apa.respond(req, res, accountData)
 
         apa.exec app, api, getUserFromDb, mod
-        app.listen 3000
+        app.listen nconf.get('port')
         callback()
 
       if data.length > 0
