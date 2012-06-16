@@ -200,6 +200,12 @@ Object.keys(mod).forEach (modelName) ->
 
 exports.run = (settings, callback) ->
 
+  express = require 'express'
+
+  app = express.createServer()
+  app.use express.bodyParser()
+
+
   nconf.env().argv().defaults
     mongo: 'mongodb://localhost/sally'
     NODE_ENV: 'development'
@@ -221,7 +227,8 @@ exports.run = (settings, callback) ->
         return
 
       if data.length > 0
-        apa.exec api, getUserFromDb, mod
+        apa.exec app, api, getUserFromDb, mod
+        app.listen 3000
         callback()
       else
         api.post 'admins', { username: 'admin', password: 'admin' }, (err) ->
@@ -229,7 +236,8 @@ exports.run = (settings, callback) ->
             console.log(err)
             process.exit(1)
           else
-            apa.exec api, getUserFromDb, mod
+            apa.exec app, api, getUserFromDb, mod
+            app.listen 3000
             callback()
 
 process.on 'uncaughtException', (exception) ->

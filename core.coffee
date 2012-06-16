@@ -1,10 +1,6 @@
 _ = require 'underscore'
-express = require 'express'
 
-app = express.createServer()
-app.use express.bodyParser()
-
-exports.exec = (db, getUserFromDb, mods) ->
+exports.exec = (app, db, getUserFromDb, mods) ->
 
   def = (method, route, mid, callback) ->
     if !callback?
@@ -160,5 +156,3 @@ exports.exec = (db, getUserFromDb, mods) ->
 
   def 'all', '*', (req, res) ->
     respond req, res, { err: 'No such resource' }, 400
-
-  app.listen 3000
