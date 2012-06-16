@@ -76,6 +76,7 @@ mod =
 
   users:
     auth: adminWrap (user) -> if user.accountAdmin then { account: user.account } else { id: user.id }
+    authCreate: adminWrap (user) -> if user.accountAdmin then { account: user.account } else null
     owners: account: 'accounts'
     fieldFilter: (user) -> ['password']
     fields:
