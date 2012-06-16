@@ -178,13 +178,13 @@ exports.run = (settings, callback) ->
               apa.respond(req, res, { err: 'Could not create account' }, 400)
               return
 
-            accountId = accountData._id.toString()
+            accountId = accountData.id.toString()
             api.postSub 'users', { username: req.body.username, password: req.body.password, accountAdmin: true }, 'account', accountId, (err, userData) ->
               if err
                 api.del 'accounts', accountId, (err, delData) ->
                   apa.respond(req, res, { err: 'Could not create user' }, 400)
               else
-                apa.respond(req, res, apa.massage(JSON.parse(JSON.stringify(accountData))))
+                apa.respond(req, res, accountData)
 
         apa.exec app, api, getUserFromDb, mod
         app.listen 3000

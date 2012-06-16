@@ -39,6 +39,26 @@ exports.create = (databaseUrl) ->
     x
 
 
+  massageOne = (x) ->
+    return x if !x?
+    x.id = x._id
+    delete x._id
+    x
+
+
+  massageCore = (r2) -> if Array.isArray r2 then r2.map massageOne else massageOne r2
+
+  massage = (r2) -> massageCore(JSON.parse(JSON.stringify(r2)))
+
+
+  massaged = (f) -> (err, data) ->
+    if err
+      f(err)
+    else
+      f(null, massage(data))
+
+
+
   # Connecting to db
   # ================
   api.connect = (databaseUrl, callback) ->
@@ -58,7 +78,7 @@ exports.create = (databaseUrl) ->
 
     filter = preprocFilter(filter)
 
-    models[model].find filter, callback
+    models[model].find filter, massaged(callback)
 
   api.get = (model, id, filter, callback) ->
     if !callback?
@@ -74,7 +94,7 @@ exports.create = (databaseUrl) ->
     filterWithId = _.extend({}, { _id: id }, filter)
 
     models[model].findOne filterWithId, propagate callback, (data) ->
-      callback((if !data? then "No such id"), data)
+      callback((if !data? then "No such id"), massage(data))
 
   api.del = (model, id, filter, callback) ->
     if !callback?
@@ -94,7 +114,7 @@ exports.create = (databaseUrl) ->
         callback "No such id"
       else
         d.remove (err) ->
-          callback err, if !err then d
+          callback err, if !err then massage(d)
 
   api.put = (modelName, id, data, filter, callback) ->
     if !callback?
@@ -124,10 +144,10 @@ exports.create = (databaseUrl) ->
         d[key] = data[key]
 
       d.save (err) ->
-        callback(err, if err then null else d)
+        callback(err, if err then null else massage(d))
 
   api.post = (model, data, callback) ->
-    new models[model](data).save callback
+    new models[model](data).save massaged(callback)
 
 
 
@@ -144,9 +164,9 @@ exports.create = (databaseUrl) ->
         else
           callback("Unique constraint violated")
       else
-        callback.apply(this, arguments)
+        massaged(callback).apply(this, arguments)
 
-  api.listSub = (model, outer, id, filter, callback) ->
+  internalListSub = (model, outer, id, filter, callback) ->
     if !callback?
       callback = filter
       filter = {}
@@ -160,6 +180,8 @@ exports.create = (databaseUrl) ->
 
     models[model].find finalFilter, callback
 
+  api.listSub = (model, outer, id, filter, callback) ->
+    internalListSub model, outer, id, filter, massaged(callback)
 
 
 
@@ -189,11 +211,11 @@ exports.create = (databaseUrl) ->
     .findOne({ _id: primaryId })
     .populate(propertyName)
     .run (err, story) ->
-      callback err, story[propertyName]
+      callback err, massage(story[propertyName])
 
   api.getManyBackwards = (model, id, propertyName, callback) ->
     db[model].find underline.makeObject(propertyName, new db.bson.ObjectID(id.toString())), (err, result) ->
-      callback(err, result)
+      callback(err, massage(result))
 
 
 
@@ -334,7 +356,7 @@ exports.create = (databaseUrl) ->
     flattenedModels = api.getOwnedModels(owner.modelName)
 
     async.forEach flattenedModels, (mod, callback) ->
-      api.listSub mod.name, mod.field, id, (err, data) ->
+      internalListSub mod.name, mod.field, id, (err, data) ->
         async.forEach data, (item, callback) ->
           item.remove callback
         , callback
@@ -353,7 +375,7 @@ exports.create = (databaseUrl) ->
     flattenedModels = _.flatten ownedModels
 
     async.forEach flattenedModels, (mod, callback) ->
-      api.listSub mod.name, mod.field, id, (err, data) ->
+      internalListSub mod.name, mod.field, id, (err, data) ->
         async.forEach data, (item, callback) ->
           item[mod.field] = null
           item.save()

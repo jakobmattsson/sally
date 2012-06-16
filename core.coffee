@@ -8,17 +8,6 @@ exports.respond = (req, res, data, result) ->
   res.json data, (result || 200)
 
 
-# This one should not be part of this layer
-# The underscore is strictly a mongodb-thing
-massageOne = (x) ->
-  x.id = x._id
-  delete x._id
-  x
-
-
-exports.massage = (r2) -> if Array.isArray r2 then r2.map massageOne else massageOne r2
-
-
 exports.exec = (app, db, getUserFromDb, mods) ->
 
   def = (method, route, mid, callback) ->
@@ -47,7 +36,7 @@ exports.exec = (app, db, getUserFromDb, mods) ->
         outdata = JSON.parse(JSON.stringify(data))
 
         if !fieldFilter
-          exports.respond req, res, exports.massage(outdata)
+          exports.respond req, res, outdata
           return
 
         getUserFromDb req, (err, user) ->
@@ -65,7 +54,7 @@ exports.exec = (app, db, getUserFromDb, mods) ->
             evaledFilter.forEach (filter) ->
               delete outdata[filter]
 
-          exports.respond req, res, exports.massage(outdata)
+          exports.respond req, res, outdata
 
 
   validateId = (req, res, next) ->
