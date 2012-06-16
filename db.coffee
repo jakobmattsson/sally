@@ -241,7 +241,6 @@ exports.create = (databaseUrl) ->
     spec = {}
     owners = conf.owners || {}
     inspec = conf.fields || {}
-    auth = conf.auth || (() -> {})
     specTransform(spec, inspec, Object.keys(inspec))
 
     # set owners
@@ -265,7 +264,6 @@ exports.create = (databaseUrl) ->
         spec[fieldName].type = ObjectId
 
     models[name] = model name, spec
-    models[name]._auth = auth
 
     models[name].schema.pre 'save', nullablesValidation(models[name].schema)
     models[name].schema.pre 'remove', (next) -> preRemoveCascadeNonNullable(models[name], this._id.toString(), next)
