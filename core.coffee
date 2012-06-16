@@ -6,14 +6,6 @@ app.use express.bodyParser()
 
 exports.exec = (db, getUserFromDb, mods) ->
 
-  getFilter = (req, model, callback) ->
-    getUserFromDb req, (err, user) ->
-      if err
-        callback err
-        return
-      filter = mods[model].auth(user)
-      callback null, filter
-
   def = (method, route, mid, callback) ->
     if !callback?
       callback = mid
@@ -86,24 +78,28 @@ exports.exec = (db, getUserFromDb, mods) ->
     owners = db.getOwners(modelName)
     manyToMany = db.getManyToMany(modelName)
 
-    midFilter = (req, res, next) ->
-      getFilter req, modelName, (err, filter) ->
+    midFilter = (type) -> (req, res, next) ->
+      getUserFromDb req, (err, user) ->
+        if err
+          callback err
+          return
+        filter = mods[modelName].auth(user)
         if !filter?
           responder(req, res)({ unauthorized: true })
         else
           req.queryFilter = filter
           next()
 
-    def 'get', "/#{modelName}", midFilter, (req, res) ->
+    def 'get', "/#{modelName}", midFilter('read'), (req, res) ->
       db.list modelName, req.queryFilter, responder(req, res, mods[modelName].fieldFilter)
 
-    def 'get', "/#{modelName}/:id", [validateId, midFilter], (req, res) ->
+    def 'get', "/#{modelName}/:id", [validateId, midFilter('read')], (req, res) ->
       db.get modelName, req.params.id, req.queryFilter, responder(req, res, mods[modelName].fieldFilter)
 
-    def 'del', "/#{modelName}/:id", [validateId, midFilter], (req, res) ->
+    def 'del', "/#{modelName}/:id", [validateId, midFilter('write')], (req, res) ->
       db.del modelName, req.params.id, req.queryFilter, responder(req, res, mods[modelName].fieldFilter)
 
-    def 'put', "/#{modelName}/:id", [validateId, midFilter], (req, res) ->
+    def 'put', "/#{modelName}/:id", [validateId, midFilter('write')], (req, res) ->
       db.put modelName, req.params.id, req.body, req.queryFilter, responder(req, res, mods[modelName].fieldFilter)
 
     def 'get', "/meta/#{modelName}", (req, res) ->
@@ -117,7 +113,7 @@ exports.exec = (db, getUserFromDb, mods) ->
         db.post modelName, req.body, responder(req, res, mods[modelName].fieldFilter)
 
     owners.forEach (owner) ->
-      def 'get', "/#{owner.plur}/:id/#{modelName}", [validateId, midFilter], (req, res) ->
+      def 'get', "/#{owner.plur}/:id/#{modelName}", [validateId, midFilter('read')], (req, res) ->
         db.listSub modelName, owner.sing, req.params.id, req.queryFilter, responder(req, res, mods[modelName].fieldFilter)
 
       def 'post', "/#{owner.plur}/:id/#{modelName}", validateId, (req, res) ->
