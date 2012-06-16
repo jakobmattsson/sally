@@ -67,7 +67,7 @@ exports.create = (databaseUrl) ->
 
     filter = preprocFilter(filter)
 
-    if filter._id? && filter._id != id
+    if filter._id? && filter._id.toString() != id.toString()
       callback("No such id")
       return
 
@@ -83,7 +83,7 @@ exports.create = (databaseUrl) ->
 
     filter = preprocFilter(filter)
 
-    if filter._id? && filter._id != id
+    if filter._id? && filter._id.toString() != id.toString()
       callback("No such id")
       return
 
@@ -113,7 +113,7 @@ exports.create = (databaseUrl) ->
       callback("Invalid fields: " + invalidFields.join(', '))
       return
 
-    if filter._id? && filter._id != id
+    if filter._id? && filter._id.toString() != id.toString()
       callback("No such id")
       return
 
@@ -157,7 +157,7 @@ exports.create = (databaseUrl) ->
       callback = filter
       filter = {}
 
-    if filter[outer]? && filter[outer] != id
+    if filter[outer]? && filter[outer].toString() != id.toString()
       callback 'No such id'
       return
 
