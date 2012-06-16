@@ -33,7 +33,7 @@ exports.create = (databaseUrl) ->
 
 
   api.getFilter = (conf, model, callback) ->
-    api.getUserFromDb db, conf, (err, user) ->
+    api.getUserFromDb conf, (err, user) ->
       if err
         callback err
         return
