@@ -44,6 +44,7 @@ db = require './db'
 apa = require './core'
 async = require 'async'
 nconf = require 'nconf'
+underline = require 'underline'
 
 api = db.create()
 model = api.defModel
@@ -107,6 +108,10 @@ defaultAuth = (targetProperty) -> (user) ->
   return null
 
 
+valUniqueInModel = (model, property) ->
+  (value, callback) ->
+    api.list model, underline.makeObject(property, value), (err, data) ->
+      callback(!err && data.length == 0)
 
 mod =
   accounts:
@@ -117,15 +122,23 @@ mod =
   admins:
     auth: (user) -> if user?.admin then {} else null
     fields:
-      username: { type: 'string', default: '' }
-      password: { type: 'string', default: '' }
+      username:
+        type: 'string'
+        required: true
+        unqiue: true
+        validate: valUniqueInModel('users', 'username')
+      password: { type: 'string', required: true }
 
   users:
     auth: defaultAuth() # implementera korrekt. vem kan se alla? vem kan ändra data? vem kan ändra lösenord?
     owners:
       account: 'accounts'
     fields:
-      username: { type: 'string', required: true, unique: true }
+      username:
+        type: 'string'
+        required: true
+        unique: true
+        validate: valUniqueInModel('admins', 'username')
       password: { type: 'string', required: true }
       accountAdmin: { type: 'boolean', default: false }
 

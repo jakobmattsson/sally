@@ -55,6 +55,18 @@ query('User can only get own account')
 .run()
 
 
+query('There cant exist a user and an admin with the same name')
+.auth('admin', 'admin')
+.post('/admins', { username: 'collidingName', password: 'somepassword' })
+.post('/accounts')
+.res('Created account', save 'account')
+.post('/accounts/#{account}/users', { username: 'collidingName', password: 'someotherpassword' })
+.post('/accounts/#{account}/users', { username: 'collidingName', password: 'someotherpassword' })
+.err(400, 'ValidationError: Validator failed for path username')
+.run()
+
+
+
 
 query('No resource')
 .get('/foobar')

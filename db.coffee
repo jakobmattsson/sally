@@ -173,6 +173,7 @@ exports.create = (databaseUrl) ->
         tgt[key].default = src[key].default if src[key].default?
         tgt[key].index = src[key].index if src[key].index?
         tgt[key].unique = src[key].unique if src[key].unique?
+        tgt[key].validate = src[key].validate if src[key].validate?
       else if src[key].type == 'number'
         tgt[key] = { type: Number, required: !!src[key].required }
         tgt[key].default = src[key].default if src[key].default?
