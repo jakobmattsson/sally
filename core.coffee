@@ -117,14 +117,14 @@ exports.exec = (db, getUserFromDb, mods) ->
       })
 
     if owners.length == 0
-      def 'post', "/#{modelName}", (req, res) ->
+      def 'post', "/#{modelName}", [midFilter('create')], (req, res) ->
         db.post modelName, req.body, responder(req, res, mods[modelName].fieldFilter)
 
     owners.forEach (owner) ->
       def 'get', "/#{owner.plur}/:id/#{modelName}", [validateId, midFilter('read')], (req, res) ->
         db.listSub modelName, owner.sing, req.params.id, req.queryFilter, responder(req, res, mods[modelName].fieldFilter)
 
-      def 'post', "/#{owner.plur}/:id/#{modelName}", validateId, (req, res) ->
+      def 'post', "/#{owner.plur}/:id/#{modelName}", [validateId, midFilter('create')], (req, res) ->
         db.postSub modelName, req.body, owner.sing, req.params.id, responder(req, res, mods[modelName].fieldFilter)
 
     manyToMany.forEach (many) ->

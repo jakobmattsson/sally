@@ -126,13 +126,7 @@ exports.create = (databaseUrl) ->
       d.save (err) ->
         callback(err, if err then null else d)
 
-  api.post = (model, data, filter, callback) ->
-    if !callback?
-      callback = filter
-      filter = {}
-
-    filter = preprocFilter(filter)
-
+  api.post = (model, data, callback) ->
     new models[model](data).save callback
 
 
