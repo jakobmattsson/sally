@@ -40,6 +40,8 @@
 
 # Kontakterna som kopplas ihop med ett möte måste valideras så att båda formerna av resurser hör till samma company
 
+# Se till att vanliga användare (eller icke-authade) inte kan skapa account genom en vanlig /POST
+
 db = require './db'
 apa = require './core'
 async = require 'async'
