@@ -13,8 +13,11 @@ exports.exec = (db) ->
 
     func = app[method]
     func.call app, route, mid, (req, res) ->
-      console.log(req.method, req.url)
-      callback(req, res)
+      try
+        console.log(req.method, req.url)
+        callback(req, res)
+      catch ex
+        respond req, res, { err: 'Internal error: ' + ex.toString() }, 500
 
 
   respond = (req, res, data, result) ->
