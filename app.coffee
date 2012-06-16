@@ -134,8 +134,7 @@ mod =
       { account: user.account }
 
 
-    owners:
-      account: 'accounts'
+    owners: account: 'accounts'
     fieldFilter: (user) -> ['password']
     fields:
       username:
@@ -148,8 +147,7 @@ mod =
 
   companies:
     auth: defaultAuth()
-    owners:
-      account: 'accounts'
+    owners: account: 'accounts'
     fields:
       name: { type: 'string', default: '' }
       notes: { type: 'string', default: '' }
@@ -157,23 +155,20 @@ mod =
 
   projects:
     auth: defaultAuth()
-    owners:
-      company: 'companies'
+    owners: company: 'companies'
     fields:
       description: { type: 'string', default: '' }
       value: { type: 'number', default: null }
 
   calls:
     auth: defaultAuth()
-    owners:
-      company: 'companies'
+    owners: company: 'companies'
     fields:
       notes: { type: 'string', default: '' }
 
   meetings:
     auth: defaultAuth()
-    owners:
-      company: 'companies'
+    owners: company: 'companies'
     fields:
       notes: { type: 'string', default: '' }
 
@@ -192,8 +187,7 @@ mod =
 
   contacts:
     auth: defaultAuth()
-    owners:
-      company: 'companies'
+    owners: company: 'companies'
     fields:
       notes: { type: 'string', default: '' }
       name:  { type: 'string', default: '' }
