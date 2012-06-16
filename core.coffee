@@ -117,8 +117,8 @@ exports.exec = (db, getUserFromDb, mods) ->
         db.post modelName, req.body, responder(req, res, mods[modelName].fieldFilter)
 
     owners.forEach (owner) ->
-      def 'get', "/#{owner.plur}/:id/#{modelName}", validateId, (req, res) ->
-        db.listSub modelName, owner.sing, req.params.id, responder(req, res, mods[modelName].fieldFilter)
+      def 'get', "/#{owner.plur}/:id/#{modelName}", [validateId, midFilter], (req, res) ->
+        db.listSub modelName, owner.sing, req.params.id, req.queryFilter, responder(req, res, mods[modelName].fieldFilter)
 
       def 'post', "/#{owner.plur}/:id/#{modelName}", validateId, (req, res) ->
         db.postSub modelName, req.body, owner.sing, req.params.id, responder(req, res, mods[modelName].fieldFilter)

@@ -152,8 +152,19 @@ exports.create = (databaseUrl) ->
       else
         callback.apply(this, arguments)
 
-  api.listSub = (model, outer, id, callback) ->
-    models[model].find underline.makeObject(outer, id), callback
+  api.listSub = (model, outer, id, filter, callback) ->
+    if !callback?
+      callback = filter
+      filter = {}
+
+    if filter[outer]? && filter[outer] != id
+      callback 'No such id'
+      return
+
+    filter = preprocFilter(filter)
+    finalFilter = _.extend({}, filter, underline.makeObject(outer, id))
+
+    models[model].find finalFilter, callback
 
 
 
