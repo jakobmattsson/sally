@@ -59,7 +59,7 @@ model = api.defModel
 # jag skulle skapat en special-route, som skapade en användare och ett konto som en atomisk operation och som
 # tillät vem som helst att göra det.
 
-api.getUserFromDb = (req, callback) ->
+getUserFromDb = (req, callback) ->
   mongojs = require 'mongojs'
   db = mongojs.connect 'mongodb://localhost/sally', Object.keys(mod)
 
@@ -213,7 +213,7 @@ exports.run = (settings, callback) ->
         return
 
       if data.length > 0
-        apa.exec api
+        apa.exec api, getUserFromDb, mod
         callback()
       else
         api.post 'admins', { username: 'admin', password: 'admin' }, (err) ->
@@ -221,5 +221,5 @@ exports.run = (settings, callback) ->
             console.log(err)
             process.exit(1)
           else
-            apa.exec api
+            apa.exec api, getUserFromDb, mod
             callback()

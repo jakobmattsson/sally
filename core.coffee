@@ -4,7 +4,15 @@ express = require 'express'
 app = express.createServer()
 app.use express.bodyParser()
 
-exports.exec = (db) ->
+exports.exec = (db, getUserFromDb, mods) ->
+
+  getFilter = (req, model, callback) ->
+    getUserFromDb req, (err, user) ->
+      if err
+        callback err
+        return
+      filter = mods[model].auth(user)
+      callback null, filter
 
   def = (method, route, mid, callback) ->
     if !callback?
@@ -57,7 +65,7 @@ exports.exec = (db) ->
     manyToMany = db.getManyToMany(modelName)
 
     def 'get', "/#{modelName}", (req, res) ->
-      db.getFilter req, modelName, (err, filter) ->
+      getFilter req, modelName, (err, filter) ->
         if !filter?
           responder(req, res)({ unauthorized: true })
         else

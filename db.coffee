@@ -32,15 +32,6 @@ exports.create = (databaseUrl) ->
       false
 
 
-  api.getFilter = (conf, model, callback) ->
-    api.getUserFromDb conf, (err, user) ->
-      if err
-        callback err
-        return
-      filter = models[model]._auth(user)
-      callback null, filter
-
-
   # Connecting to db
   # ================
   api.connect = (databaseUrl, callback) ->
