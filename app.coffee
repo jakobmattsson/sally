@@ -80,7 +80,7 @@ getUserFromDb = (req, callback) ->
       return
 
     if results[1].length > 0
-      callback(null, { account: results[1].account })
+      callback(null, { account: results[1][0].account })
       return
 
     if results[0].length > 0

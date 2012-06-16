@@ -39,6 +39,22 @@ query('No resource')
 .run()
 
 
+query('User can only get own account')
+.auth('admin', 'admin')
+.post('/accounts')
+.res('Created account', save 'account')
+.post('/accounts')
+.res('Created another account', save 'account2')
+.post('/accounts/#{account}/users', { username: 'u1', password: 'pass' })
+.res('Created user', save 'user')
+.get('/accounts')
+.res('Got all accounts as admin', (data) -> data.length.should.be.above 1)
+.auth('u1', 'pass')
+.get('/accounts')
+.res('Get just one account as user', (data) -> data.length.should.eql 1)
+.run()
+
+
 
 query('No resource')
 .get('/foobar')

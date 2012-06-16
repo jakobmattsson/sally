@@ -64,12 +64,16 @@ exports.exec = (db, getUserFromDb, mods) ->
     owners = db.getOwners(modelName)
     manyToMany = db.getManyToMany(modelName)
 
-    def 'get', "/#{modelName}", (req, res) ->
+    midFilter = (req, res, next) ->
       getFilter req, modelName, (err, filter) ->
         if !filter?
           responder(req, res)({ unauthorized: true })
         else
-          db.list modelName, filter, responder(req, res)
+          req.queryFilter = filter
+          next()
+
+    def 'get', "/#{modelName}", midFilter, (req, res) ->
+      db.list modelName, req.queryFilter, responder(req, res)
 
     def 'get', "/#{modelName}/:id", validateId, (req, res) ->
       db.get modelName, req.params.id, responder(req, res)
