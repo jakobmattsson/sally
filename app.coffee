@@ -116,7 +116,7 @@ mod =
     authWrite: adminWrap (user) -> if user.accountAdmin then { id: user.account } else null
     authCreate: adminWrap (user) -> null
     fields:
-      name: { type: 'string', default: '' }
+      name: { type: 'string', required: true, unique: true }
 
   admins:
     auth: adminWrap (user) -> null
@@ -226,19 +226,34 @@ exports.run = (settings, callback) ->
         console.log err
         return
 
-      if data.length > 0
+      onGo = ->
+        app.post '/signup', (req, res) ->
+          api.post 'accounts', { name: req.body.account }, (err, accountData) ->
+            if err
+              apa.respond(req, res, { err: 'Could not create account' }, 400)
+              return
+
+            accountId = accountData._id.toString()
+            api.postSub 'users', { username: req.body.username, password: req.body.password, accountAdmin: true }, 'account', accountId, (err, userData) ->
+              if err
+                api.del 'accounts', accountId, (err, delData) ->
+                  apa.respond(req, res, { err: 'Could not create user' }, 400)
+              else
+                apa.respond(req, res, apa.massage(JSON.parse(JSON.stringify(accountData))))
+
         apa.exec app, api, getUserFromDb, mod
         app.listen 3000
         callback()
+
+      if data.length > 0
+        onGo()
       else
         api.post 'admins', { username: 'admin', password: 'admin' }, (err) ->
           if err
             console.log(err)
             process.exit(1)
           else
-            apa.exec app, api, getUserFromDb, mod
-            app.listen 3000
-            callback()
+            onGo()
 
 process.on 'uncaughtException', (exception) ->
   console.log "Uncaught exception"

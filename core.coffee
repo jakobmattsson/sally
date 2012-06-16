@@ -1,5 +1,24 @@
 _ = require 'underscore'
 
+exports.respond = (req, res, data, result) ->
+  res.header 'Access-Control-Allow-Origin', req.headers.origin
+  res.header 'Access-Control-Allow-Credentials', 'true'
+  res.header 'Access-Control-Allow-Headers', 'Authorization'
+  res.header 'Access-Control-Allow-Methods', 'POST, GET, OPTIONS, DELETE, PUT'
+  res.json data, (result || 200)
+
+
+# This one should not be part of this layer
+# The underscore is strictly a mongodb-thing
+massageOne = (x) ->
+  x.id = x._id
+  delete x._id
+  x
+
+
+exports.massage = (r2) -> if Array.isArray r2 then r2.map massageOne else massageOne r2
+
+
 exports.exec = (app, db, getUserFromDb, mods) ->
 
   def = (method, route, mid, callback) ->
@@ -13,29 +32,22 @@ exports.exec = (app, db, getUserFromDb, mods) ->
         console.log(req.method, req.url)
         callback(req, res)
       catch ex
-        respond req, res, { err: 'Internal error: ' + ex.toString() }, 500
+        exports.respond req, res, { err: 'Internal error: ' + ex.toString() }, 500
 
-
-  respond = (req, res, data, result) ->
-    res.header 'Access-Control-Allow-Origin', req.headers.origin
-    res.header 'Access-Control-Allow-Credentials', 'true'
-    res.header 'Access-Control-Allow-Headers', 'Authorization'
-    res.header 'Access-Control-Allow-Methods', 'POST, GET, OPTIONS, DELETE, PUT'
-    res.json data, (result || 200)
 
   responder = (req, res, fieldFilter) ->
     (err, data) ->
       if err
         if err.unauthorized
           res.header 'WWW-Authenticate', 'Basic realm="sally"'
-          respond req, res, { err: "unauthed" }, 401
+          exports.respond req, res, { err: "unauthed" }, 401
         else
-          respond req, res, { err: err.toString() }, 400
+          exports.respond req, res, { err: err.toString() }, 400
       else
         outdata = JSON.parse(JSON.stringify(data))
 
         if !fieldFilter
-          respond req, res, massageResult(outdata)
+          exports.respond req, res, exports.massage(outdata)
           return
 
         getUserFromDb req, (err, user) ->
@@ -53,21 +65,14 @@ exports.exec = (app, db, getUserFromDb, mods) ->
             evaledFilter.forEach (filter) ->
               delete outdata[filter]
 
-          respond req, res, massageResult(outdata)
+          exports.respond req, res, exports.massage(outdata)
 
 
   validateId = (req, res, next) ->
     if db.isValidId(req.params.id)
       next()
     else
-      respond req, res, { err: 'No such id' }, 400 # duplication. can this be extracted out?
-
-  massageOne = (x) ->
-    x.id = x._id
-    delete x._id
-    x
-
-  massageResult = (r2) -> if Array.isArray r2 then r2.map massageOne else massageOne r2
+      exports.respond req, res, { err: 'No such id' }, 400 # duplication. can this be extracted out?
 
   db.getModels().forEach (modelName) ->
 
@@ -147,12 +152,12 @@ exports.exec = (app, db, getUserFromDb, mods) ->
             responder(req, res)(err || innerErr, data)
 
   def 'get', '/', (req, res) ->
-    respond req, res,
+    exports.respond req, res,
       roots: db.getModels().filter((name) -> db.getOwners(name).length == 0)
       verbs: []
 
   def 'options', '*', (req, res) ->
-    respond(req, res, {}, 200)
+    exports.respond(req, res, {}, 200)
 
   def 'all', '*', (req, res) ->
-    respond req, res, { err: 'No such resource' }, 400
+    exports.respond req, res, { err: 'No such resource' }, 400
