@@ -371,6 +371,8 @@ query('Testing security access between accounts')
 .err(400, 'No such id')
 .del('/accounts/#{account1}')
 .err(400, 'No such id')
+.put('/accounts/#{account1}', { name: 'test' })
+.err(400, 'No such id')
 .run()
 
 

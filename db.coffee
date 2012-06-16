@@ -99,7 +99,13 @@ exports.create = (databaseUrl) ->
       callback("Invalid fields: " + invalidFields.join(', '))
       return
 
-    model.findById id, propagate callback, (d) ->
+    if filter._id? && filter._id != id
+      callback("No such id")
+      return
+
+    filterWithId = _.extend({}, { _id: id }, filter)
+
+    model.findOne filterWithId, propagate callback, (d) ->
       inputFields.forEach (key) ->
         d[key] = data[key]
 
