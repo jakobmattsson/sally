@@ -76,7 +76,7 @@ exports.exec = (db, getUserFromDb, mods) ->
       db.list modelName, req.queryFilter, responder(req, res)
 
     def 'get', "/#{modelName}/:id", [validateId, midFilter], (req, res) ->
-      db.get modelName, req.params.id, responder(req, res)
+      db.get modelName, req.params.id, req.queryFilter, responder(req, res)
 
     def 'del', "/#{modelName}/:id", validateId, (req, res) ->
       db.del modelName, req.params.id, responder(req, res)

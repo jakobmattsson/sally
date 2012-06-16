@@ -353,3 +353,23 @@ query('Setting a boolean type by passing in any falsy value')
 .post('/accounts/#{account}/users', { username: 'foz', password: 'baz', accountAdmin: 0 })
 .res('Created user', (data) -> data.should.include { username: 'foz', password: 'baz', accountAdmin: false })
 .run()
+
+
+
+query('Testing security access between accounts')
+.auth('admin', 'admin')
+.post('/accounts')
+.res('Created account #1', save 'account1')
+.post('/accounts/#{account1}/users', { username: 'test_u1', 'password': '123' })
+.res('Created user #1', save 'user1')
+.post('/accounts')
+.res('Created account #2', save 'account2')
+.post('/accounts/#{account2}/users', { username: 'test_u2', 'password': '123' })
+.res('Created user #2', save 'user2')
+.auth('test_u2', '123')
+.get('/accounts/#{account1}')
+.err(400, 'No such id')
+.run()
+
+
+
