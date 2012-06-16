@@ -81,7 +81,7 @@ getUserFromDb = (req, callback) ->
       return
 
     if results[1].length > 0
-      callback(null, { account: results[1][0].account })
+      callback(null, { account: results[1][0].account, id: results[1][0]._id, accountAdmin: results[1][0].accountAdmin })
       return
 
     if results[0].length > 0
@@ -131,7 +131,16 @@ mod =
       password: { type: 'string', required: true }
 
   users:
-    auth: defaultAuth() # implementera korrekt. vem kan se alla? vem kan ändra data? vem kan ändra lösenord?
+    auth: (user) ->
+      return null if !user?
+      return {} if user.admin
+
+      if !user.accountAdmin
+        return { _id: user.id } # måste får bort underscoret här. Det är en implemtationsdetalj för mongo.
+
+      { account: user.account }
+
+
     owners:
       account: 'accounts'
     fieldFilter: (user) -> ['password']

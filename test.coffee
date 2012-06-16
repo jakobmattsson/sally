@@ -1,7 +1,7 @@
 nconf = require 'nconf'
 should = require 'should'
 mongojs = require 'mongojs'
-trester = require 'trester'
+trester = require '../trester/src/trester'
 query = (text) -> trester.query(text, { origin: 'http://localhost:3000' })
 save = (name) -> (data) -> this[name] = data.id
 
@@ -83,6 +83,29 @@ query('No one can access password for admins or users')
 .get('/accounts/#{account}/users')
 .res('Gets all user info, except password, as user', (data) -> data.forEach (x) -> x.should.have.keys('username', 'id', 'accountAdmin', 'account'))
 .run()
+
+
+
+query('Users can only see themselves, unless they are account admins, in which case they can see the same account')
+.auth('admin', 'admin')
+.post('/accounts')
+.res('Created account', save 'account1')
+.post('/accounts/#{account1}/users', { username: 'user1', password: 'user1' })
+.post('/accounts/#{account1}/users', { username: 'user2', password: 'user2', accountAdmin: true })
+.post('/accounts')
+.res('Created account', save 'account2')
+.post('/accounts/#{account2}/users', { username: 'user3', password: 'user3', accountAdmin: true })
+.auth('user1', 'user1')
+.get('/users')
+.res('Regular user sees only himself', (data) -> data.should.have.lengthOf(1); data[0].username.should.eql('user1'))
+.auth('user2', 'user2')
+.get('/users')
+.res('Admin user sees all users in same account', (data) -> data.should.have.lengthOf(2); data[0].username.should.eql('user1'); data[1].username.should.eql('user2');)
+.auth('user3', 'user3')
+.get('/users')
+.res('Lone admin user user sees only himself', (data) -> data.should.have.lengthOf(1); data[0].username.should.eql('user3'))
+.run()
+
 
 
 
