@@ -69,11 +69,10 @@ exports.exec = (app, db, getUserFromDb, mods) ->
     manyToMany = db.getManyToMany(modelName)
 
     midFilter = (type) -> (req, res, next) ->
-      authFuncs = {
+      authFuncs =
         read: mods[modelName].auth || ->
         write: mods[modelName].authWrite
         create: mods[modelName].authCreate
-      }
       authFuncs.write ?= authFuncs.read
       authFuncs.create ?= authFuncs.write
 
