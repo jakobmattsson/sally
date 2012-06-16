@@ -69,6 +69,7 @@ query('There cant exist a user and an admin with the same name')
 
 
 query('No resource')
+.auth('admin', 'admin')
 .get('/foobar')
 .err(400, 'No such resource')
 .run()
@@ -82,6 +83,7 @@ query('No id')
 
 
 query('Testing so invalid IDs return the same error message as nonexisting IDs')
+.auth('admin', 'admin')
 .get('/companies/1234')
 .err(400, 'No such id')
 .run()
@@ -89,6 +91,7 @@ query('Testing so invalid IDs return the same error message as nonexisting IDs')
 
 
 query('Creating companies')
+.auth('admin', 'admin')
 .post('/accounts')
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -98,6 +101,7 @@ query('Creating companies')
 
 
 query('Attempting to save nonexisting field')
+.auth('admin', 'admin')
 .post('/accounts')
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -124,6 +128,7 @@ query('Ensure that PUT-operations are atomic')
 
 
 query('Attempting to override id')
+.auth('admin', 'admin')
 .post('/accounts')
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -135,6 +140,7 @@ query('Attempting to override id')
 
 
 query('Attempting to override _id')
+.auth('admin', 'admin')
 .post('/accounts')
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -184,6 +190,7 @@ query('Cascading delete')
 
 
 query('Meeting pointing to a valid call or nothing')
+.auth('admin', 'admin')
 .post('/accounts')
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -242,6 +249,7 @@ query('Nulling foreign keys when pointed item is removed')
 
 
 query('Create many-to-many relation')
+.auth('admin', 'admin')
 .post('/accounts')
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -299,6 +307,7 @@ query('Test meta fields')
 
 
 query('Creating users')
+.auth('admin', 'admin')
 .post('/accounts')
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'foo', password: 'baz' })
@@ -308,6 +317,7 @@ query('Creating users')
 
 
 query('Attempting to create another user with the same username')
+.auth('admin', 'admin')
 .post('/accounts')
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'foo', password: 'baz' })
@@ -317,6 +327,7 @@ query('Attempting to create another user with the same username')
 
 
 query('Attempting to create user without username or password')
+.auth('admin', 'admin')
 .post('/accounts')
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users')
@@ -326,6 +337,7 @@ query('Attempting to create user without username or password')
 
 
 query('Setting a boolean type by passing in any truthy value')
+.auth('admin', 'admin')
 .post('/accounts')
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'foobar', password: 'baz', accountAdmin: 'yes' })
@@ -335,6 +347,7 @@ query('Setting a boolean type by passing in any truthy value')
 
 
 query('Setting a boolean type by passing in any falsy value')
+.auth('admin', 'admin')
 .post('/accounts')
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'foz', password: 'baz', accountAdmin: 0 })
