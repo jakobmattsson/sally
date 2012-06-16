@@ -11,7 +11,7 @@ verbs = []
 
 exports.verb = (app, route, middleware, callback) ->
   app.post '/' + route, middleware, callback
-  verbs.push(route)
+  verbs.push route
 
 exports.exec = (app, db, getUserFromDb, mods) ->
 
@@ -67,6 +67,7 @@ exports.exec = (app, db, getUserFromDb, mods) ->
       next()
     else
       exports.respond req, res, { err: 'No such id' }, 400 # duplication. can this be extracted out?
+
 
   db.getModels().forEach (modelName) ->
 
