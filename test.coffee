@@ -67,6 +67,26 @@ query('There cant exist a user and an admin with the same name')
 
 
 
+query('No one can access password for admins or users')
+.auth('admin', 'admin')
+.post('/admins', { username: 'admin1', password: 'admin1' })
+.res('Created admin', save 'admin')
+.post('/accounts')
+.res('Created account', save 'account')
+.post('/accounts/#{account}/users', { username: 'user1', password: 'user1' })
+.post('/accounts/#{account}/users', { username: 'user2', password: 'user2', accountAdmin: true })
+.get('/admins/#{admin}')
+.res('Gets all admin info, except password', (data) -> data.should.have.keys('username', 'id'))
+.get('/accounts/#{account}/users')
+.res('Gets all user info, except password', (data) -> data.forEach (x) -> x.should.have.keys('username', 'id', 'accountAdmin', 'account'))
+.auth('user1', 'user1')
+.get('/accounts/#{account}/users')
+.res('Gets all user info, except password, as user', (data) -> data.forEach (x) -> x.should.have.keys('username', 'id', 'accountAdmin', 'account'))
+.run()
+
+
+
+
 
 query('No resource')
 .auth('admin', 'admin')
@@ -311,7 +331,7 @@ query('Creating users')
 .post('/accounts')
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'foo', password: 'baz' })
-.res('Created user', (data) -> data.should.include { username: 'foo', password: 'baz', accountAdmin: false })
+.res('Created user', (data) -> data.should.include { username: 'foo', accountAdmin: false })
 .run()
 
 
@@ -341,7 +361,7 @@ query('Setting a boolean type by passing in any truthy value')
 .post('/accounts')
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'foobar', password: 'baz', accountAdmin: 'yes' })
-.res('Created user', (data) -> data.should.include { username: 'foobar', password: 'baz', accountAdmin: true })
+.res('Created user', (data) -> data.should.include { username: 'foobar', accountAdmin: true })
 .run()
 
 
@@ -351,7 +371,7 @@ query('Setting a boolean type by passing in any falsy value')
 .post('/accounts')
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'foz', password: 'baz', accountAdmin: 0 })
-.res('Created user', (data) -> data.should.include { username: 'foz', password: 'baz', accountAdmin: false })
+.res('Created user', (data) -> data.should.include { username: 'foz', accountAdmin: false })
 .run()
 
 

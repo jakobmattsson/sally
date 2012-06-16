@@ -121,6 +121,7 @@ mod =
 
   admins:
     auth: (user) -> if user?.admin then {} else null
+    fieldFilter: (user) -> ['password']
     fields:
       username:
         type: 'string'
@@ -133,6 +134,7 @@ mod =
     auth: defaultAuth() # implementera korrekt. vem kan se alla? vem kan ändra data? vem kan ändra lösenord?
     owners:
       account: 'accounts'
+    fieldFilter: (user) -> ['password']
     fields:
       username:
         type: 'string'
