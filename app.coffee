@@ -92,13 +92,13 @@ getUserFromDb = (req, callback) ->
 
     callback(null, null)
 
-
-defaultAuth = (targetProperty) -> (user) ->
-  # null means: you must authorize yourself
-  # {} means: you are allowed access to every object in the collection
-  # any other object means: you are allowed access to those objects matching the given object
+adminWrap = (f) -> (user) ->
   return null if !user?
   return {} if user.admin
+  return f(user)
+
+
+defaultAuth = (targetProperty) -> adminWrap (user) ->
   return underline.makeObject(targetProperty || 'account', user.account) if user.account
   return null
 
@@ -107,6 +107,9 @@ valUniqueInModel = (model, property) -> (value, callback) ->
   api.list model, underline.makeObject(property, value), (err, data) ->
     callback(!err && data.length == 0)
 
+
+
+
 mod =
   accounts:
     auth: defaultAuth('id')
@@ -114,7 +117,7 @@ mod =
       name: { type: 'string', default: '' }
 
   admins:
-    auth: (user) -> if user?.admin then {} else null
+    auth: adminWrap((user) -> null)
     fieldFilter: (user) -> ['password']
     fields:
       username:
@@ -125,11 +128,7 @@ mod =
       password: { type: 'string', required: true }
 
   users:
-    auth: (user) ->
-      return null if !user?
-      return {} if user.admin
-      return { id: user.id } if !user.accountAdmin
-      return { account: user.account }
+    auth: adminWrap (user) -> if user.accountAdmin then { account: user.account } else { id: user.id }
     owners: account: 'accounts'
     fieldFilter: (user) -> ['password']
     fields:

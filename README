@@ -1,3 +1,22 @@
 # Deploying
 
 Just run `jitsu deploy`
+
+
+### Auth
+
+Three levels of auth:
+* read
+* write
+* create
+
+If no auth-function is written, anyone is allowed to do every operation (even anonymous users)
+If an "auth" function is created, that one will be used as basis for all three level.
+If an "authWrite" function is created, that one will be used for write and create.
+If an "authCreate" function is created, that one will be used to authorize create-actions.
+
+All the auth functions recieves a user as input parameter and returns an object describing the access level.
+It should be interpreted like this:
+* null means: you must authorize yourself
+* {} means: you are allowed access to every object in the collection
+* any other object means: you are allowed access to those objects matching the given object
