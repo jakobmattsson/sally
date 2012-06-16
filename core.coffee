@@ -78,8 +78,8 @@ exports.exec = (db, getUserFromDb, mods) ->
     def 'get', "/#{modelName}/:id", [validateId, midFilter], (req, res) ->
       db.get modelName, req.params.id, req.queryFilter, responder(req, res)
 
-    def 'del', "/#{modelName}/:id", validateId, (req, res) ->
-      db.del modelName, req.params.id, responder(req, res)
+    def 'del', "/#{modelName}/:id", [validateId, midFilter], (req, res) ->
+      db.del modelName, req.params.id, req.queryFilter, responder(req, res)
 
     def 'put', "/#{modelName}/:id", validateId, (req, res) ->
       db.put modelName, req.params.id, req.body, responder(req, res)

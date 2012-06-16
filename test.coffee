@@ -369,6 +369,8 @@ query('Testing security access between accounts')
 .auth('test_u2', '123')
 .get('/accounts/#{account1}')
 .err(400, 'No such id')
+.del('/accounts/#{account1}')
+.err(400, 'No such id')
 .run()
 
 

@@ -71,7 +71,13 @@ exports.create = (databaseUrl) ->
       callback = filter
       filter = {}
 
-    models[model].findById id, propagate callback, (d) ->
+    if filter._id? && filter._id != id
+      callback("No such id")
+      return
+
+    filterWithId = _.extend({}, { _id: id }, filter)
+
+    models[model].findOne filterWithId, propagate callback, (d) ->
       if !d?
         callback "No such id"
       else
