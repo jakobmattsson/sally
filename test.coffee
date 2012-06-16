@@ -75,6 +75,7 @@ query('No resource')
 
 
 query('No id')
+.auth('admin', 'admin')
 .get('/companies/123456781234567812345678')
 .err(400, 'No such id')
 .run()
@@ -108,6 +109,7 @@ query('Attempting to save nonexisting field')
 
 
 query('Ensure that PUT-operations are atomic')
+.auth('admin', 'admin')
 .post('/accounts')
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -217,6 +219,7 @@ query('Meeting pointing to a valid call or nothing')
 
 
 query('Nulling foreign keys when pointed item is removed')
+.auth('admin', 'admin')
 .post('/accounts')
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
