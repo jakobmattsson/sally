@@ -1,47 +1,3 @@
-# Lägg till statiska filer, tex /favicon.ico
-
-
-
-# AUTHENTICATION
-# Ägarskap är aldrig föränderligt (detta gör många saker mycket lättare)
-# Förusatt att authentication alltid baseras på ägarskapsheirarkin så kan med fylla ut alla objekt med redundans
-# Den här redundansen kan sedan användas för att avgöra om man har tillgång till objektet eller ej
-
-
-# Borde testa att indirekta ägare också kopieras över när man lägger till ett nytt löv i heirarkin
-
-
-# Natural IDs. En kolumn som är sträng eller integer och unik över hela modellen kan användas som nyckel.
-# Borde finnas en option för att göra just det.
-# Först och främst behöver jag en option för att säga att en kolumn ska vara unik.
-
-# Many-to-many relations
-
-# Making a super simple GUI (just tables)
-# JSONP-friendly
-# Getting it to run properly on nodejitsu, with their mongodb
-
-# Måste kunna skriva "pre"- och "post"-middleware här i denna filen. För tex auth.
-
-# Nested data structures (tänk prowikes översättningar)
-
-# Many-to-many:
-# * vilka kontakter var på mötet?
-# * vilken kontakt ringde jag?
-# * vilka av våra anställda var det som ringde samtalet eller gick på mötet?
-
-# LIST meetings/1234/contacts
-# LIST calls/1234/contacts
-
-# POST meetings/1234/contacts/567
-# DEL meetings/1234/contacts/567
-
-# Det kan absolut få finnas data i den här relationen. Den kan man sätta med POST, uppdatera med PUT och läsa med GET som vanligt
-
-# Kontakterna som kopplas ihop med ett möte måste valideras så att båda formerna av resurser hör till samma company
-
-# Se till att vanliga användare (eller icke-authade) inte kan skapa account genom en vanlig /POST
-
 db = require './db'
 apa = require './core'
 async = require 'async'
@@ -50,17 +6,6 @@ underline = require 'underline'
 
 api = db.create()
 model = api.defModel
-
-
-# Nu
-# * Tillämpa auth i alla routes (kommer kräva att testerna patchas upp)
-
-# man för att göra detta behöver man väl olika säkerhetsnivåer?
-# tänk tex på att skapa ett account, det ska man kunna göra även om man inte är inloggad
-# (kanske inte i denna appen, men föreställ situationen först åtminstone)
-
-# jag skulle skapat en special-route, som skapade en användare och ett konto som en atomisk operation och som
-# tillät vem som helst att göra det.
 
 getUserFromDb = (req, callback) ->
   mongojs = require 'mongojs'
