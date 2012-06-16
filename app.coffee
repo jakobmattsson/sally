@@ -115,7 +115,7 @@ mod =
       name: { type: 'string', default: '' }
 
   admins:
-    auth: (user) -> if user? && user.admin then {} else null
+    auth: (user) -> if user?.admin then {} else null
     fields:
       username: { type: 'string', default: '' }
       password: { type: 'string', default: '' }
