@@ -32,7 +32,7 @@ query('No resource')
 
 
 
-query('No resource')
+query('Can get accouts as admin')
 .auth('admin', 'admin')
 .get('/accounts')
 .res('Got accounts')
