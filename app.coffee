@@ -108,7 +108,7 @@ valUniqueInModel = (model, property) ->
 
 mod =
   accounts:
-    auth: defaultAuth('_id') # jobbigt att det behöver vara "_id" istället för "id"
+    auth: defaultAuth('id')
     fields:
       name: { type: 'string', default: '' }
 
@@ -129,7 +129,7 @@ mod =
       return {} if user.admin
 
       if !user.accountAdmin
-        return { _id: user.id } # måste får bort underscoret här. Det är en implemtationsdetalj för mongo.
+        return { id: user.id }
 
       { account: user.account }
 

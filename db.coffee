@@ -32,6 +32,12 @@ exports.create = (databaseUrl) ->
     catch ex
       false
 
+  preprocFilter = (filter) ->
+    x = _.extend({}, filter)
+    x._id = x.id if x.id
+    delete x.id
+    x
+
 
   # Connecting to db
   # ================
@@ -50,12 +56,16 @@ exports.create = (databaseUrl) ->
       callback = filter
       filter = {}
 
+    filter = preprocFilter(filter)
+
     models[model].find filter, callback
 
   api.get = (model, id, filter, callback) ->
     if !callback?
       callback = filter
       filter = {}
+
+    filter = preprocFilter(filter)
 
     if filter._id? && filter._id != id
       callback("No such id")
@@ -70,6 +80,8 @@ exports.create = (databaseUrl) ->
     if !callback?
       callback = filter
       filter = {}
+
+    filter = preprocFilter(filter)
 
     if filter._id? && filter._id != id
       callback("No such id")
@@ -88,6 +100,8 @@ exports.create = (databaseUrl) ->
     if !callback?
       callback = filter
       filter = {}
+
+    filter = preprocFilter(filter)
 
     model = models[modelName]
     inputFields = Object.keys data
@@ -116,6 +130,8 @@ exports.create = (databaseUrl) ->
     if !callback?
       callback = filter
       filter = {}
+
+    filter = preprocFilter(filter)
 
     new models[model](data).save callback
 
