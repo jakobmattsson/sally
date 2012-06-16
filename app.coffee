@@ -101,10 +101,9 @@ defaultAuth = (targetProperty) -> (user) ->
   return null
 
 
-valUniqueInModel = (model, property) ->
-  (value, callback) ->
-    api.list model, underline.makeObject(property, value), (err, data) ->
-      callback(!err && data.length == 0)
+valUniqueInModel = (model, property) -> (value, callback) ->
+  api.list model, underline.makeObject(property, value), (err, data) ->
+    callback(!err && data.length == 0)
 
 mod =
   accounts:
@@ -127,13 +126,8 @@ mod =
     auth: (user) ->
       return null if !user?
       return {} if user.admin
-
-      if !user.accountAdmin
-        return { id: user.id }
-
-      { account: user.account }
-
-
+      return { id: user.id } if !user.accountAdmin
+      return { account: user.account }
     owners: account: 'accounts'
     fieldFilter: (user) -> ['password']
     fields:
