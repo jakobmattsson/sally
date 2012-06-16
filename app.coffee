@@ -236,3 +236,7 @@ exports.run = (settings, callback) ->
           else
             apa.exec api, getUserFromDb, mod
             callback()
+
+process.on 'uncaughtException', (exception) ->
+  console.log "Uncaught exception"
+  console.log exception
