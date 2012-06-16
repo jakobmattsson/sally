@@ -7,6 +7,11 @@ exports.respond = (req, res, data, result) ->
   res.header 'Access-Control-Allow-Methods', 'POST, GET, OPTIONS, DELETE, PUT'
   res.json data, (result || 200)
 
+verbs = []
+
+exports.verb = (app, route, middleware, callback) ->
+  app.post '/' + route, middleware, callback
+  verbs.push(route)
 
 exports.exec = (app, db, getUserFromDb, mods) ->
 
@@ -142,7 +147,7 @@ exports.exec = (app, db, getUserFromDb, mods) ->
   def 'get', '/', (req, res) ->
     exports.respond req, res,
       roots: db.getModels().filter((name) -> db.getOwners(name).length == 0)
-      verbs: []
+      verbs: verbs
 
   def 'options', '*', (req, res) ->
     exports.respond(req, res, {}, 200)

@@ -12,7 +12,7 @@ mongojs.connect('mongodb://localhost/sally').dropDatabase () ->
 
 query('Root')
 .get('/')
-.res('Get root', (data) -> data.should.eql { roots: ['accounts', 'admins'], verbs: [] })
+.res('Get root', (data) -> data.should.eql { roots: ['accounts', 'admins'], verbs: ['signup'] })
 .run()
 
 

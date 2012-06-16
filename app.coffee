@@ -172,7 +172,7 @@ exports.run = (settings, callback) ->
         return
 
       onGo = ->
-        app.post '/signup', (req, res) ->
+        apa.verb app, 'signup', (req, res) ->
           api.post 'accounts', { name: req.body.account }, (err, accountData) ->
             if err
               apa.respond(req, res, { err: 'Could not create account' }, 400)
