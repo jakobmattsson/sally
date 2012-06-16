@@ -115,7 +115,16 @@ exports.create = (databaseUrl) ->
   # ===========
   api.postSub = (model, data, outer, id, callback) ->
     data[outer] = id
-    new models[model](data).save callback
+    new models[model](data).save (err) ->
+      if err && err.code == 11000
+        fieldMatch = err.err.match(/\$([a-zA-Z]+)_1/)
+        valueMatch = err.err.match(/"([a-zA-Z]+)"/)
+        if fieldMatch && valueMatch
+          callback("Duplicate value '#{valueMatch[1]}' for #{fieldMatch[1]}")
+        else
+          callback("Unique constraint violated")
+      else
+        callback.apply(this, arguments)
 
   api.listSub = (model, outer, id, callback) ->
     filter = {}

@@ -280,7 +280,7 @@ query('Attempting to create another user with the same username')
 .post('/accounts')
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'foo', password: 'baz' })
-.err(400, 'MongoError: E11000 duplicate key error index: sally1.users.$username_1  dup key: { : \"foo\" }')
+.err(400, "Duplicate value 'foo' for username")
 .run()
 
 
