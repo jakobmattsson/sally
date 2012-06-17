@@ -153,6 +153,7 @@ exports.run = (settings, callback) ->
 
   app = express.createServer()
   app.use express.bodyParser()
+  app.use express.responseTime()
 
 
   nconf.env().argv().defaults
