@@ -14,7 +14,19 @@ exports.verb = (app, route, middleware, callback) ->
   app.post '/' + route, middleware, callback
   verbs.push route
 
-exports.exec = (app, db, getUserFromDb, mods) ->
+exports.exec = (app, db, getUserFromDbCore, mods) ->
+
+  getUserFromDb = (req, callback) ->
+    if req._hasCache
+      callback(null, req._cachedUser)
+      return
+    getUserFromDbCore req, (err, result) ->
+      if err
+        callback(err)
+        return
+      req._hasCache = true
+      req._cachedUser = result
+      callback(null, result)
 
   def = (method, route, mid, callback) ->
     if !callback?
