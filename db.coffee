@@ -80,20 +80,14 @@ exports.create = (databaseUrl) ->
 
     models[model].find filter, massaged(callback)
 
-  api.get = (model, id, filter, callback) ->
+  api.get = (model, filter, callback) ->
     if !callback?
       callback = filter
       filter = {}
 
     filter = preprocFilter(filter)
 
-    if filter._id? && filter._id.toString() != id.toString()
-      callback("No such id")
-      return
-
-    filterWithId = _.extend({}, { _id: id }, filter)
-
-    models[model].findOne filterWithId, propagate callback, (data) ->
+    models[model].findOne filter, propagate callback, (data) ->
       callback((if !data? then "No such id"), massage(data))
 
   api.del = (model, id, filter, callback) ->
@@ -341,7 +335,7 @@ exports.create = (databaseUrl) ->
     nonNullOuters = outers.filter (x) -> self[x.sing]?
 
     async.forEach nonNullOuters, (o, callback) ->
-      api.get o.plur, self[o.sing], (err, data) ->
+      api.get o.plur, { id: self[o.sing] }, (err, data) ->
         if err || !data
           callback(new Error("Invalid pointer"))
         else if o.validation

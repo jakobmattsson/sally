@@ -18,23 +18,22 @@ exports.verb = (app, route, middleware, callback) ->
 exports.exec = (app, db, getUserFromDbCore, mods) ->
 
   getUserFromDb = (req, callback) ->
-    if req._hasCache
+    if req._hasCachedUser
       callback(null, req._cachedUser)
       return
     getUserFromDbCore req, (err, result) ->
       if err
         callback(err)
         return
-      req._hasCache = true
+      req._hasCachedUser = true
       req._cachedUser = result
       callback(null, result)
 
   def2 = (method, route, preMid, postMid, callback) ->
     func = app[method]
     func.call app, route, preMid, (req, res) ->
-      try
-        console.log(req.method, req.url)
-        callback req, (err, data) ->
+      errHandler = (f) ->
+        (err, data) ->
           if err
             if err.unauthorized
               res.header 'WWW-Authenticate', 'Basic realm="sally"'
@@ -42,29 +41,24 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
             else
               exports.respond req, res, { err: err.toString() }, 400
             return
+          f(data)
 
+      try
+        console.log(req.method, req.url)
+        callback req, errHandler (data) ->
           async.reduce postMid, data, (memo, mid, callback) ->
             mid(req, data, callback)
-          , (err, result) ->
-            if err
-              if err.unauthorized
-                res.header 'WWW-Authenticate', 'Basic realm="sally"'
-                exports.respond req, res, { err: "unauthed" }, 401
-              else
-                exports.respond req, res, { err: err.toString() }, 400
-              return
+          , errHandler (result) ->
             exports.respond req, res, result
       catch ex
         console.log(ex.message)
         console.log(ex.stack)
         exports.respond req, res, { err: 'Internal error: ' + ex.toString() }, 500
 
-  fieldFilterMiddleware = (fieldFilter) -> (req, data, callback) ->
-
-    outdata = JSON.parse(JSON.stringify(data))
+  fieldFilterMiddleware = (fieldFilter) -> (req, outdata, callback) ->
 
     if !fieldFilter
-      callback(null, data)
+      callback(null, outdata)
       return
 
     getUserFromDb req, (err, user) ->
@@ -90,10 +84,23 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
     else
       exports.respond req, res, { err: 'No such id' }, 400 # duplication. can this be extracted out?
 
+  naturalize = (field) -> (req, data, callback) ->
+    if !field?
+      callback(null, data)
+      return
+
+    # transform = (d) ->
+    #   d.id = d[field]
+    #   d
+    #
+    # if Array.isArray data
+    #   data = data.map(transform)
+    # else
+    #   data = transform(data)
 
 
 
-
+    callback null, data
 
 
 
@@ -123,32 +130,41 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
           req.queryFilter = filter
           next()
 
-    def2 'get', "/#{modelName}", [midFilter('read')], [fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
+    def2 'get', "/#{modelName}", [midFilter('read')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
       db.list modelName, req.queryFilter, callback
 
-    def2 'get', "/#{modelName}/:id", [validateId, midFilter('read')], [fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
-      db.get modelName, req.params.id, req.queryFilter, callback
+    def2 'get', "/#{modelName}/:id", [validateId, midFilter('read')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
+      id = req.params.id
+      filter = req.queryFilter
 
-    def2 'del', "/#{modelName}/:id", [validateId, midFilter('write')], [fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
+      if filter.id? && filter.id.toString() != id.toString()
+        callback("No such id")
+        return
+
+      filter = _.extend({}, { id: id }, filter)
+
+      db.get modelName, filter, callback
+
+    def2 'del', "/#{modelName}/:id", [validateId, midFilter('write')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
       db.del modelName, req.params.id, req.queryFilter, callback
 
-    def2 'put', "/#{modelName}/:id", [validateId, midFilter('write')], [fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
+    def2 'put', "/#{modelName}/:id", [validateId, midFilter('write')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
       db.put modelName, req.params.id, req.body, req.queryFilter, callback
 
     def2 'get', "/meta/#{modelName}", [], [], (req, callback) ->
       callback null,
         owns: db.getOwnedModels(modelName).map((x) -> x.name)
-        fields:db.getMetaFields(modelName)
+        fields: db.getMetaFields(modelName)
 
     if owners.length == 0
-      def2 'post', "/#{modelName}", [midFilter('create')], [fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
+      def2 'post', "/#{modelName}", [midFilter('create')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
         db.post modelName, req.body, callback
 
     owners.forEach (owner) ->
-      def2 'get', "/#{owner.plur}/:id/#{modelName}", [validateId, midFilter('read')], [fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
+      def2 'get', "/#{owner.plur}/:id/#{modelName}", [validateId, midFilter('read')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
         db.listSub modelName, owner.sing, req.params.id, req.queryFilter, callback
 
-      def2 'post', "/#{owner.plur}/:id/#{modelName}", [validateId, midFilter('create')], [fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
+      def2 'post', "/#{owner.plur}/:id/#{modelName}", [validateId, midFilter('create')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
         db.postSub modelName, req.body, owner.sing, req.params.id, callback
 
     manyToMany.forEach (many) ->
@@ -165,12 +181,12 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
         db.getManyBackwards modelName, req.params.id, many.name, callback
 
       def2 'del', "/#{modelName}/:id/#{many.name}/:other", [], [], (req, callback) ->
-        db.get many.ref, req.params.other, (err, data) ->
+        db.get many.ref, { id: req.params.other }, (err, data) ->
           db.delMany modelName, req.params.id, many.name, many.ref, req.params.other, (innerErr) ->
             callback(err || innerErr, data)
 
       def2 'del', "/#{many.name}/:other/#{modelName}/:id", [], [], (req, callback) ->
-        db.get modelName, req.params.id, (err, data) ->
+        db.get modelName, { id: req.params.id }, (err, data) ->
           db.delMany modelName, req.params.id, many.name, many.ref, req.params.other, (innerErr) ->
             callback(err || innerErr, data)
 
