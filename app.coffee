@@ -2,14 +2,20 @@ db = require './db'
 apa = require './core'
 async = require 'async'
 nconf = require 'nconf'
+mongojs = require 'mongojs'
 underline = require 'underline'
 
 api = db.create()
 model = api.defModel
 
+
+getUserConnection = null
+
 getUserFromDb = (req, callback) ->
-  mongojs = require 'mongojs'
-  db = mongojs.connect nconf.get('mongo'), Object.keys(mod)
+  console.log("get user from db")
+
+  if !getUserConnection
+    getUserConnection = mongojs.connect nconf.get('mongo'), Object.keys(mod)
 
   if !req.headers.authorization
     callback(null, false)
@@ -21,7 +27,7 @@ getUserFromDb = (req, callback) ->
   password = au[1]
 
   async.map ['admins', 'users'], (collection, callback) ->
-    db[collection].find { username: username, password: password }, callback
+    getUserConnection[collection].find { username: username, password: password }, callback
   , (err, results) ->
     if err
       callback(null, null)
