@@ -146,7 +146,16 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
       db.getOne modelName, filter, callback
 
     def2 'del', "/#{modelName}/:id", [validateId, midFilter('write')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
-      db.del modelName, req.params.id, req.queryFilter, callback
+      id = req.params.id
+      filter = req.queryFilter
+
+      if filter.id? && filter.id.toString() != id.toString()
+        callback("No such id")
+        return
+
+      filter = _.extend({}, { id: id }, filter)
+
+      db.delOne modelName, filter, callback
 
     def2 'put', "/#{modelName}/:id", [validateId, midFilter('write')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
       db.put modelName, req.params.id, req.body, req.queryFilter, callback

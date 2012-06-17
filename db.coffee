@@ -90,20 +90,14 @@ exports.create = (databaseUrl) ->
     models[model].findOne filter, propagate callback, (data) ->
       callback((if !data? then "No such id"), massage(data))
 
-  api.del = (model, id, filter, callback) ->
+  api.delOne = (model, filter, callback) ->
     if !callback?
       callback = filter
       filter = {}
 
     filter = preprocFilter(filter)
 
-    if filter._id? && filter._id.toString() != id.toString()
-      callback("No such id")
-      return
-
-    filterWithId = _.extend({}, { _id: id }, filter)
-
-    models[model].findOne filterWithId, propagate callback, (d) ->
+    models[model].findOne filter, propagate callback, (d) ->
       if !d?
         callback "No such id"
       else
