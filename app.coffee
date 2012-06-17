@@ -12,8 +12,6 @@ model = api.defModel
 getUserConnection = null
 
 getUserFromDb = (req, callback) ->
-  console.log("get user from db")
-
   if !getUserConnection
     getUserConnection = mongojs.connect nconf.get('mongo'), Object.keys(mod)
 
