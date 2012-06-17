@@ -104,7 +104,7 @@ exports.create = (databaseUrl) ->
         d.remove (err) ->
           callback err, if !err then massage(d)
 
-  api.put = (modelName, id, data, filter, callback) ->
+  api.putOne = (modelName, data, filter, callback) ->
     if !callback?
       callback = filter
       filter = {}
@@ -121,13 +121,7 @@ exports.create = (databaseUrl) ->
       callback("Invalid fields: " + invalidFields.join(', '))
       return
 
-    if filter._id? && filter._id.toString() != id.toString()
-      callback("No such id")
-      return
-
-    filterWithId = _.extend({}, { _id: id }, filter)
-
-    model.findOne filterWithId, propagate callback, (d) ->
+    model.findOne filter, propagate callback, (d) ->
       inputFields.forEach (key) ->
         d[key] = data[key]
 
