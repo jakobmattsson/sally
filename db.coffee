@@ -128,6 +128,10 @@ exports.create = (databaseUrl) ->
       return
 
     model.findOne filter, propagate callback, (d) ->
+      if !d?
+        callback "No such id"
+        return
+
       inputFields.forEach (key) ->
         d[key] = data[key]
 
