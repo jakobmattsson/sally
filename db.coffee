@@ -162,9 +162,6 @@ exports.create = (databaseUrl) ->
 
     models[model].find finalFilter, callback
 
-  api.listSub = (model, outer, id, filter, callback) ->
-    internalListSub model, outer, id, filter, massaged(callback)
-
 
 
 

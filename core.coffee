@@ -1,5 +1,6 @@
 _ = require 'underscore'
 async = require 'async'
+underline = require 'underline'
 
 exports.respond = (req, res, data, result) ->
   if req.headers.origin
@@ -180,7 +181,17 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
 
     owners.forEach (owner) ->
       def2 'get', "/#{owner.plur}/:id/#{modelName}", [validateId, midFilter('read')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
-        db.listSub modelName, owner.sing, req.params.id, req.queryFilter, callback
+        filter = req.queryFilter
+        id = req.params.id
+        outer = owner.sing
+
+        if filter[outer]? && filter[outer].toString() != id.toString()
+          callback 'No such id'
+          return
+
+        filter = _.extend({}, filter, underline.makeObject(outer, id))
+
+        db.list modelName, filter, callback
 
       def2 'post', "/#{owner.plur}/:id/#{modelName}", [validateId, midFilter('create')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
         db.postSub modelName, req.body, owner.sing, req.params.id, callback
