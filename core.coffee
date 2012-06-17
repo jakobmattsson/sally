@@ -143,7 +143,7 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
 
       filter = _.extend({}, { id: id }, filter)
 
-      db.get modelName, filter, callback
+      db.getOne modelName, filter, callback
 
     def2 'del', "/#{modelName}/:id", [validateId, midFilter('write')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
       db.del modelName, req.params.id, req.queryFilter, callback
@@ -181,12 +181,12 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
         db.getManyBackwards modelName, req.params.id, many.name, callback
 
       def2 'del', "/#{modelName}/:id/#{many.name}/:other", [], [], (req, callback) ->
-        db.get many.ref, { id: req.params.other }, (err, data) ->
+        db.getOne many.ref, { id: req.params.other }, (err, data) ->
           db.delMany modelName, req.params.id, many.name, many.ref, req.params.other, (innerErr) ->
             callback(err || innerErr, data)
 
       def2 'del', "/#{many.name}/:other/#{modelName}/:id", [], [], (req, callback) ->
-        db.get modelName, { id: req.params.id }, (err, data) ->
+        db.getOne modelName, { id: req.params.id }, (err, data) ->
           db.delMany modelName, req.params.id, many.name, many.ref, req.params.other, (innerErr) ->
             callback(err || innerErr, data)
 

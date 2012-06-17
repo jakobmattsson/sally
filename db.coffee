@@ -80,7 +80,7 @@ exports.create = (databaseUrl) ->
 
     models[model].find filter, massaged(callback)
 
-  api.get = (model, filter, callback) ->
+  api.getOne = (model, filter, callback) ->
     if !callback?
       callback = filter
       filter = {}
@@ -335,7 +335,7 @@ exports.create = (databaseUrl) ->
     nonNullOuters = outers.filter (x) -> self[x.sing]?
 
     async.forEach nonNullOuters, (o, callback) ->
-      api.get o.plur, { id: self[o.sing] }, (err, data) ->
+      api.getOne o.plur, { id: self[o.sing] }, (err, data) ->
         if err || !data
           callback(new Error("Invalid pointer"))
         else if o.validation
