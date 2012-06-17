@@ -104,6 +104,17 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
     callback null, data
 
 
+  mergeFilter = (req, res, next) ->
+    id = req.params.id
+    filter = req.queryFilter
+
+    if filter.id? && filter.id.toString() != id.toString()
+      exports.respond req, res, { err: 'No such id' }, 400 # duplication. can this be extracted out?
+      return
+
+    req.queryFilter = _.extend({}, { id: id }, filter)
+    next()
+
 
 
   db.getModels().forEach (modelName) ->
@@ -134,41 +145,14 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
     def2 'get', "/#{modelName}", [midFilter('read')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
       db.list modelName, req.queryFilter, callback
 
-    def2 'get', "/#{modelName}/:id", [validateId, midFilter('read')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
-      id = req.params.id
-      filter = req.queryFilter
+    def2 'get', "/#{modelName}/:id", [validateId, midFilter('read'), mergeFilter], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
+      db.getOne modelName, req.queryFilter, callback
 
-      if filter.id? && filter.id.toString() != id.toString()
-        callback("No such id")
-        return
+    def2 'del', "/#{modelName}/:id", [validateId, midFilter('write'), mergeFilter], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
+      db.delOne modelName, req.queryFilter, callback
 
-      filter = _.extend({}, { id: id }, filter)
-
-      db.getOne modelName, filter, callback
-
-    def2 'del', "/#{modelName}/:id", [validateId, midFilter('write')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
-      id = req.params.id
-      filter = req.queryFilter
-
-      if filter.id? && filter.id.toString() != id.toString()
-        callback("No such id")
-        return
-
-      filter = _.extend({}, { id: id }, filter)
-
-      db.delOne modelName, filter, callback
-
-    def2 'put', "/#{modelName}/:id", [validateId, midFilter('write')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
-      id = req.params.id
-      filter = req.queryFilter
-
-      if filter.id? && filter.id.toString() != id.toString()
-        callback("No such id")
-        return
-
-      filter = _.extend({}, { id: id }, filter)
-
-      db.putOne modelName, req.body, filter, callback
+    def2 'put', "/#{modelName}/:id", [validateId, midFilter('write'), mergeFilter], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
+      db.putOne modelName, req.body, req.queryFilter, callback
 
     def2 'get', "/meta/#{modelName}", [], [], (req, callback) ->
       callback null,
