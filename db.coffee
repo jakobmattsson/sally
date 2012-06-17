@@ -87,7 +87,13 @@ exports.create = (databaseUrl) ->
 
     filter = preprocFilter(filter)
 
-    models[model].findOne filter, propagate callback, (data) ->
+    models[model].findOne filter, (err, data) ->
+      if err
+        if err.toString() == 'Error: Invalid ObjectId'
+          callback("No such id")
+        else
+          callback(err)
+        return
       callback((if !data? then "No such id"), massage(data))
 
   api.delOne = (model, filter, callback) ->
