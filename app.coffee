@@ -9,7 +9,7 @@ model = api.defModel
 
 getUserFromDb = (req, callback) ->
   mongojs = require 'mongojs'
-  db = mongojs.connect 'mongodb://localhost/sally', Object.keys(mod)
+  db = mongojs.connect nconf.get('mongo'), Object.keys(mod)
 
   if !req.headers.authorization
     callback(null, false)
