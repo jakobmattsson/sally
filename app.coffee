@@ -63,6 +63,7 @@ mod =
     auth: defaultAuth('id')
     authWrite: adminWrap (user) -> if user.accountAdmin then { id: user.account } else null
     authCreate: adminWrap (user) -> null
+    naturalId: 'name'
     fields:
       name: { type: 'string', required: true, unique: true }
 
@@ -193,6 +194,8 @@ exports.run = (settings, callback) ->
                 api.delOne 'accounts', { id: accountId }, (err, delData) ->
                   apa.respond(req, res, { err: 'Could not create user' }, 400)
               else
+                if mod.accounts.naturalId?
+                  accountData.id = accountData[mod.accounts.naturalId]
                 apa.respond(req, res, accountData)
 
         apa.exec app, api, getUserFromDb, mod

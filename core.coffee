@@ -56,6 +56,16 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
         console.log(ex.stack)
         exports.respond req, res, { err: 'Internal error: ' + ex.toString() }, 500
 
+  naturalizeIn = (field) -> (req, res, next) ->
+    if !field?
+      req.queryFilter = {}
+      req.queryFilter.id = req.params.id
+      next()
+    else
+      req.queryFilter = {}
+      req.queryFilter[field] = req.params.id
+      next()
+
   joinFilters = (filter1, filter2) ->
     filter1 ?= {}
     filter2 ?= {}
@@ -86,26 +96,21 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
 
       callback(null, outdata)
 
-  naturalize = (field) -> (req, data, callback) ->
+  naturalizeOut = (field) -> (req, data, callback) ->
     if !field?
       callback(null, data)
       return
 
+    transform = (d) ->
+      d.id = d[field]
+      d
+
+    if Array.isArray data
+      data = data.map(transform)
+    else
+      data = transform(data)
+
     callback null, data
-
-
-  mergeFilter = (req, res, next) ->
-    id = req.params.id
-    filter = req.queryFilter
-
-    if filter.id? && filter.id.toString() != id.toString()
-      exports.respond req, res, { err: 'No such id' }, 400 # duplication. can this be extracted out?
-      return
-
-    req.queryFilter = _.extend({}, { id: id }, filter)
-    next()
-
-
 
   db.getModels().forEach (modelName) ->
 
@@ -135,16 +140,16 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
           else
             next()
 
-    def2 'get', "/#{modelName}", [midFilter('read')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
+    def2 'get', "/#{modelName}", [midFilter('read')], [naturalizeOut(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
       db.list modelName, req.queryFilter, callback
 
-    def2 'get', "/#{modelName}/:id", [midFilter('read'), mergeFilter], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
+    def2 'get', "/#{modelName}/:id", [naturalizeIn(mods[modelName].naturalId), midFilter('read')], [naturalizeOut(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
       db.getOne modelName, req.queryFilter, callback
 
-    def2 'del', "/#{modelName}/:id", [midFilter('write'), mergeFilter], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
+    def2 'del', "/#{modelName}/:id", [naturalizeIn(mods[modelName].naturalId), midFilter('write')], [naturalizeOut(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
       db.delOne modelName, req.queryFilter, callback
 
-    def2 'put', "/#{modelName}/:id", [midFilter('write'), mergeFilter], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
+    def2 'put', "/#{modelName}/:id", [naturalizeIn(mods[modelName].naturalId), midFilter('write')], [naturalizeOut(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
       db.putOne modelName, req.body, req.queryFilter, callback
 
     def2 'get', "/meta/#{modelName}", [], [], (req, callback) ->
@@ -153,14 +158,28 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
         fields: db.getMetaFields(modelName)
 
     if owners.length == 0
-      def2 'post', "/#{modelName}", [midFilter('create')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
+      def2 'post', "/#{modelName}", [midFilter('create')], [naturalizeOut(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
         db.post modelName, req.body, callback
 
     owners.forEach (owner) ->
-      def2 'get', "/#{owner.plur}/:id/#{modelName}", [midFilter('read')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
+      def2 'get', "/#{owner.plur}/:id/#{modelName}", [midFilter('read')], [naturalizeOut(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
         filter = req.queryFilter
         id = req.params.id
         outer = owner.sing
+
+        # <natural-id>
+        natId = mods[owner.plur].naturalId
+        if natId?
+          obj = underline.makeObject(natId, req.params.id)
+          db.getOne owner.plur, obj, (err, resObj) ->
+            filter2 = underline.makeObject(owner.sing, resObj.id)
+            filter = joinFilters(filter, filter2)
+            if !filter?
+              callback('No such id')
+              return
+            db.list modelName, filter, callback
+          return
+        # </natural-id>
 
         filter = joinFilters(filter, underline.makeObject(outer, id))
         if !filter?
@@ -169,8 +188,23 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
 
         db.list modelName, filter, callback
 
-      def2 'post', "/#{owner.plur}/:id/#{modelName}", [midFilter('create')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
+      def2 'post', "/#{owner.plur}/:id/#{modelName}", [midFilter('create')], [naturalizeOut(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
         data = _.extend({}, req.body, underline.makeObject(owner.sing, req.params.id))
+
+        # <natural-id>
+        natId = mods[owner.plur].naturalId
+        if natId?
+          obj = underline.makeObject(natId, req.params.id)
+          db.getOne owner.plur, obj, (err, resObj) ->
+            if err
+              callback(err)
+              return
+
+            data[owner.sing] = resObj.id
+            db.post modelName, data, callback
+          return
+        # </natural-id>
+
         db.post modelName, data, callback
 
     manyToMany.forEach (many) ->
