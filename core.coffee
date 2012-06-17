@@ -84,17 +84,6 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
       callback(null, data)
       return
 
-    # transform = (d) ->
-    #   d.id = d[field]
-    #   d
-    #
-    # if Array.isArray data
-    #   data = data.map(transform)
-    # else
-    #   data = transform(data)
-
-
-
     callback null, data
 
 
