@@ -6,7 +6,6 @@ mongojs = require 'mongojs'
 underline = require 'underline'
 
 api = db.create()
-model = api.defModel
 
 
 getUserConnection = null
@@ -148,7 +147,7 @@ mod =
 
 
 Object.keys(mod).forEach (modelName) ->
-  model modelName, mod[modelName]
+  api.defModel modelName, mod[modelName]
 
 
 exports.run = (settings, callback) ->
