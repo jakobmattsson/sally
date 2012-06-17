@@ -29,19 +29,6 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
       req._cachedUser = result
       callback(null, result)
 
-  def = (method, route, mid, callback) ->
-    if !callback?
-      callback = mid
-      mid = []
-
-    func = app[method]
-    func.call app, route, mid, (req, res) ->
-      try
-        console.log(req.method, req.url)
-        callback(req, res)
-      catch ex
-        exports.respond req, res, { err: 'Internal error: ' + ex.toString() }, 500
-
   def2 = (method, route, preMid, postMid, callback) ->
     func = app[method]
     func.call app, route, preMid, (req, res) ->
@@ -97,46 +84,18 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
 
       callback(null, outdata)
 
-
-
-  responder = (req, res, fieldFilter) ->
-    (err, data) ->
-      if err
-        if err.unauthorized
-          res.header 'WWW-Authenticate', 'Basic realm="sally"'
-          exports.respond req, res, { err: "unauthed" }, 401
-        else
-          exports.respond req, res, { err: err.toString() }, 400
-      else
-        outdata = JSON.parse(JSON.stringify(data))
-
-        if !fieldFilter
-          exports.respond req, res, outdata
-          return
-
-        getUserFromDb req, (err, user) ->
-          if err
-            callback err
-            return
-
-          evaledFilter = fieldFilter(user)
-
-          if Array.isArray(outdata)
-            outdata.forEach (x) ->
-              evaledFilter.forEach (filter) ->
-                delete x[filter]
-          else
-            evaledFilter.forEach (filter) ->
-              delete outdata[filter]
-
-          exports.respond req, res, outdata
-
-
   validateId = (req, res, next) ->
     if db.isValidId(req.params.id)
       next()
     else
       exports.respond req, res, { err: 'No such id' }, 400 # duplication. can this be extracted out?
+
+
+
+
+
+
+
 
 
   db.getModels().forEach (modelName) ->
@@ -158,7 +117,8 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
           return
         filter = authFuncs[type](user)
         if !filter?
-          responder(req, res)({ unauthorized: true })
+          res.header 'WWW-Authenticate', 'Basic realm="sally"'
+          exports.respond req, res, { err: "unauthed" }, 401
         else
           req.queryFilter = filter
           next()
@@ -175,11 +135,10 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
     def2 'put', "/#{modelName}/:id", [validateId, midFilter('write')], [fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
       db.put modelName, req.params.id, req.body, req.queryFilter, callback
 
-    def 'get', "/meta/#{modelName}", (req, res) ->
-      responder(req, res)(null, {
+    def2 'get', "/meta/#{modelName}", [], [], (req, callback) ->
+      callback null,
         owns: db.getOwnedModels(modelName).map((x) -> x.name)
         fields:db.getMetaFields(modelName)
-      })
 
     if owners.length == 0
       def2 'post', "/#{modelName}", [midFilter('create')], [fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
@@ -193,35 +152,35 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
         db.postSub modelName, req.body, owner.sing, req.params.id, callback
 
     manyToMany.forEach (many) ->
-      def 'post', "/#{modelName}/:id/#{many.name}/:other", (req, res) ->
-        db.postMany modelName, req.params.id, many.name, many.ref, req.params.other, responder(req, res)
+      def2 'post', "/#{modelName}/:id/#{many.name}/:other", [], [], (req, callback) ->
+        db.postMany modelName, req.params.id, many.name, many.ref, req.params.other, callback
 
-      def 'post', "/#{many.name}/:other/#{modelName}/:id", (req, res) ->
-        db.postMany modelName, req.params.id, many.name, many.ref, req.params.other, responder(req, res)
+      def2 'post', "/#{many.name}/:other/#{modelName}/:id", [], [], (req, callback) ->
+        db.postMany modelName, req.params.id, many.name, many.ref, req.params.other, callback
 
-      def 'get', "/#{modelName}/:id/#{many.name}", (req, res) ->
-        db.getMany modelName, req.params.id, many.name, responder(req, res)
+      def2 'get', "/#{modelName}/:id/#{many.name}", [], [], (req, callback) ->
+        db.getMany modelName, req.params.id, many.name, callback
 
-      def 'get', "/#{many.name}/:id/#{modelName}", (req, res) ->
-        db.getManyBackwards modelName, req.params.id, many.name, responder(req, res)
+      def2 'get', "/#{many.name}/:id/#{modelName}", [], [], (req, callback) ->
+        db.getManyBackwards modelName, req.params.id, many.name, callback
 
-      def 'del', "/#{modelName}/:id/#{many.name}/:other", (req, res) ->
+      def2 'del', "/#{modelName}/:id/#{many.name}/:other", [], [], (req, callback) ->
         db.get many.ref, req.params.other, (err, data) ->
           db.delMany modelName, req.params.id, many.name, many.ref, req.params.other, (innerErr) ->
-            responder(req, res)(err || innerErr, data)
+            callback(err || innerErr, data)
 
-      def 'del', "/#{many.name}/:other/#{modelName}/:id", (req, res) ->
+      def2 'del', "/#{many.name}/:other/#{modelName}/:id", [], [], (req, callback) ->
         db.get modelName, req.params.id, (err, data) ->
           db.delMany modelName, req.params.id, many.name, many.ref, req.params.other, (innerErr) ->
-            responder(req, res)(err || innerErr, data)
+            callback(err || innerErr, data)
 
-  def 'get', '/', (req, res) ->
-    exports.respond req, res,
+  def2 'get', '/', [], [], (req, callback) ->
+    callback null,
       roots: db.getModels().filter((name) -> db.getOwners(name).length == 0)
       verbs: verbs
 
-  def 'options', '*', (req, res) ->
-    exports.respond(req, res, {}, 200)
+  def2 'options', '*', [], [], (req, callback) ->
+    callback null, {}
 
-  def 'all', '*', (req, res) ->
-    exports.respond req, res, { err: 'No such resource' }, 400
+  def2 'all', '*', [], [], (req, callback) ->
+    callback 'No such resource'
