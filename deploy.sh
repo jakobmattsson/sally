@@ -10,7 +10,7 @@ npm test || {
   echo >&2 "Test failed, aborting."
   exit 1
 }
-jitsu deploy || {
+jitsu deploy -r patch || {
   echo >&2 "Deployment failed, aborting."
   exit 1
 }
