@@ -188,7 +188,7 @@ exports.run = (settings, callback) ->
               return
 
             accountId = accountData.id.toString()
-            api.postSub 'users', { username: req.body.username, password: req.body.password, accountAdmin: true }, 'account', accountId, (err, userData) ->
+            api.post 'users', { account: accountId, username: req.body.username, password: req.body.password, accountAdmin: true }, (err, userData) ->
               if err
                 api.delOne 'accounts', { id: accountId }, (err, delData) ->
                   apa.respond(req, res, { err: 'Could not create user' }, 400)

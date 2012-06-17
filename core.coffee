@@ -194,7 +194,8 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
         db.list modelName, filter, callback
 
       def2 'post', "/#{owner.plur}/:id/#{modelName}", [validateId, midFilter('create')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
-        db.postSub modelName, req.body, owner.sing, req.params.id, callback
+        data = _.extend({}, req.body, underline.makeObject(owner.sing, req.params.id))
+        db.post modelName, data, callback
 
     manyToMany.forEach (many) ->
       def2 'post', "/#{modelName}/:id/#{many.name}/:other", [], [], (req, callback) ->

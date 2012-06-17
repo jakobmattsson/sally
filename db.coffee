@@ -128,15 +128,12 @@ exports.create = (databaseUrl) ->
       d.save (err) ->
         callback(err, if err then null else massage(d))
 
-  api.post = (model, data, callback) ->
-    new models[model](data).save massaged(callback)
 
 
 
   # Sub-methods
   # ===========
-  api.postSub = (model, data, outer, id, callback) ->
-    data[outer] = id
+  api.post = (model, data, callback) ->
     new models[model](data).save (err) ->
       if err && err.code == 11000
         fieldMatch = err.err.match(/\$([a-zA-Z]+)_1/)
