@@ -1,10 +1,11 @@
 _ = require 'underscore'
 
 exports.respond = (req, res, data, result) ->
-  res.header 'Access-Control-Allow-Origin', req.headers.origin
-  res.header 'Access-Control-Allow-Credentials', 'true'
-  res.header 'Access-Control-Allow-Headers', 'Authorization'
-  res.header 'Access-Control-Allow-Methods', 'POST, GET, OPTIONS, DELETE, PUT'
+  if req.headers.origin
+    res.header 'Access-Control-Allow-Origin', req.headers.origin
+    res.header 'Access-Control-Allow-Credentials', 'true'
+    res.header 'Access-Control-Allow-Headers', 'Authorization'
+    res.header 'Access-Control-Allow-Methods', 'POST, GET, OPTIONS, DELETE, PUT'
   res.json data, (result || 200)
 
 verbs = []
