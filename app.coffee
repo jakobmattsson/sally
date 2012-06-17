@@ -205,6 +205,7 @@ exports.run = (settings, callback) ->
           else
             onGo()
 
-process.on 'uncaughtException', (exception) ->
-  console.log "Uncaught exception"
-  console.log exception
+process.on 'uncaughtException', (ex) ->
+  console.log 'Uncaught exception:', ex.message
+  console.log ex.stack
+  process.exit 1
