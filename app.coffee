@@ -129,6 +129,7 @@ mod =
 
         # Denna validering är någon form av "common ancestor".
         # I och med redundansen så är det väldigt lätt att generalisera.
+        # commonAncestors: ['company']
         validation: (meeting, call, callback) ->
           if meeting.company.toString() != call.company.toString()
             callback 'The origin call does not belong to the same company as the meeting'
