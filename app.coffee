@@ -1,5 +1,5 @@
 db = require 'manikin-mongodb'
-apa = require './core'
+apa = require 'rester'
 async = require 'async'
 nconf = require 'nconf'
 mongojs = require 'mongojs'
