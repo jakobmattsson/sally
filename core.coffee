@@ -162,11 +162,10 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
         id = req.params.id
         outer = owner.sing
 
-        if filter[outer]? && filter[outer].toString() != id.toString()
+        filter = joinFilters(filter, underline.makeObject(outer, id))
+        if !filter?
           callback 'No such id'
           return
-
-        filter = _.extend({}, filter, underline.makeObject(outer, id))
 
         db.list modelName, filter, callback
 
