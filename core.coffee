@@ -56,6 +56,13 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
         console.log(ex.stack)
         exports.respond req, res, { err: 'Internal error: ' + ex.toString() }, 500
 
+  joinFilters = (filter1, filter2) ->
+    filter1 ?= {}
+    filter2 ?= {}
+    dupKeys = _.intersection(Object.keys(filter1), Object.keys(filter2))
+    return undefined if dupKeys.some (name) -> filter1[name].toString() != filter2[name].toString()
+    _.extend({}, filter1, filter2)
+
   fieldFilterMiddleware = (fieldFilter) -> (req, outdata, callback) ->
 
     if !fieldFilter
@@ -122,8 +129,11 @@ exports.exec = (app, db, getUserFromDbCore, mods) ->
           res.header 'WWW-Authenticate', 'Basic realm="sally"'
           exports.respond req, res, { err: "unauthed" }, 401
         else
-          req.queryFilter = filter
-          next()
+          req.queryFilter = joinFilters(filter, req.queryFilter)
+          if !req.queryFilter?
+            exports.respond req, res, { err: "No such id" }, 401
+          else
+            next()
 
     def2 'get', "/#{modelName}", [midFilter('read')], [naturalize(mods[modelName].naturalId), fieldFilterMiddleware(mods[modelName].fieldFilter)], (req, callback) ->
       db.list modelName, req.queryFilter, callback
