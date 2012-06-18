@@ -1,4 +1,4 @@
-db = require './db'
+db = require 'manikin-mongodb'
 apa = require './core'
 async = require 'async'
 nconf = require 'nconf'
