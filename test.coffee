@@ -342,9 +342,9 @@ query('Test meta owns')
 
 
 query('Test meta fields')
-.get('/meta/accounts').res('Meta fields for accounts', (data) -> data.fields.should.eql [{ name: 'id', type: 'string', readonly: true }, { name: 'name', type: 'string', readonly: false }])
-.get('/meta/projects').res('Meta fields for projects', (data) -> data.fields.should.eql [{ name: 'account', type: 'string', readonly: true }, { name: 'company', type: 'string', readonly: true }, { name: 'description', type: 'string', readonly: false }, { name: 'id', type: 'string', readonly: true }, { name: 'value', type: 'number', readonly: false }])
-.get('/meta/companies').res('Meta fields for companies', (data) -> data.fields.should.eql [{ name: 'account', type: 'string', readonly: true }, { name: 'address', type: 'string', readonly: false }, { name: 'id', type: 'string', readonly: true }, { name: 'name', type: 'string', readonly: false }, { name: 'notes', type: 'string', readonly: false }])
+.get('/meta/accounts').res('Meta fields for accounts', (data) -> data.fields.should.eql [{ name: 'id', type: 'string', readonly: true, required: false }, { name: 'name', type: 'string', readonly: false, required: true }])
+.get('/meta/projects').res('Meta fields for projects', (data) -> data.fields.should.eql [{ name: 'account', type: 'string', readonly: true, required: false }, { name: 'company', type: 'string', readonly: true, required: false }, { name: 'description', type: 'string', readonly: false, required: false }, { name: 'id', type: 'string', readonly: true, required: false }, { name: 'value', type: 'number', readonly: false, required: false }])
+.get('/meta/companies').res('Meta fields for companies', (data) -> data.fields.should.eql [{ name: 'account', type: 'string', readonly: true, required: false }, { name: 'address', type: 'string', readonly: false, required: false }, { name: 'id', type: 'string', readonly: true, required: false }, { name: 'name', type: 'string', readonly: false, required: false }, { name: 'notes', type: 'string', readonly: false, required: false }])
 .run()
 
 
