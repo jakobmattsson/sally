@@ -1,7 +1,7 @@
 nconf = require 'nconf'
 should = require 'should'
 mongojs = require 'mongojs'
-trester = require '../trester/src/trester'
+trester = require 'trester'
 query = (text) -> trester.query(text, { origin: 'http://localhost:3000' })
 save = (name) -> (data) -> this[name] = data.id
 
