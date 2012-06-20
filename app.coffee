@@ -15,7 +15,7 @@ getUserFromDb = (req, callback) ->
     getUserConnection = mongojs.connect nconf.get('mongo'), Object.keys(mod)
 
   if !req.headers.authorization
-    callback(null, false)
+    callback(null, null)
     return
 
   code = req.headers.authorization.slice(6)
