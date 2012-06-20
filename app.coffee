@@ -169,6 +169,7 @@ exports.run = (settings, callback) ->
   console.log("Starting up")
   console.log("Environment mongo:", nconf.get('mongo'))
   console.log("Environment NODE_ENV:", nconf.get('NODE_ENV'))
+  console.log("Environment port:", nconf.get('port'))
 
   api.connect nconf.get('mongo'), (err) ->
     if err
