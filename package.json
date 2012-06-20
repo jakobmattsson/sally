@@ -13,7 +13,7 @@
     "underline": "0.0.1",
     "nconf": "0.5.x",
     "mongojs": "0.4.x",
-    "manikin-mongodb": "0.1.x",
+    "manikin-mongodb": "0.2.x",
     "rester": "0.1.x",
     "underscore": "1.3.x",
     "async": "0.1.x",
