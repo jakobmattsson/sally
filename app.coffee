@@ -4,6 +4,7 @@ async = require 'async'
 nconf = require 'nconf'
 mongojs = require 'mongojs'
 underline = require 'underline'
+viaduct = require 'viaduct-server'
 
 api = db.create()
 
@@ -159,6 +160,7 @@ exports.run = (settings, callback) ->
   app = express.createServer()
   app.use express.bodyParser()
   app.use express.responseTime()
+  app.use viaduct.connect()
 
 
   nconf.env().argv().defaults
