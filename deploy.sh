@@ -6,6 +6,8 @@ git pull || {
   echo >&2 "Pull failed, aborting."
   exit 1
 }
+npm prune
+npm install
 npm test || {
   echo >&2 "Test failed, aborting."
   exit 1
