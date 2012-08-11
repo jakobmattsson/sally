@@ -47,3 +47,31 @@ POST meetings/1234/contacts/567
 DEL meetings/1234/contacts/567
 
 Det kan absolut få finnas data i den här relationen. Den kan man sätta med POST, uppdatera med PUT och läsa med GET som vanligt
+
+
+
+
+##
+## AUTH
+## ==============================================================================
+##
+
+# autha mot kontot i locke
+# om lockekontot:
+#  * finns:
+#    * om uppgifterna är rätt: gå vidare
+#    * om uppgifterna är fel: avbryt, fail!
+#  * inte finns: skapa lockekontot och gå vidare
+# om sallykontot:
+#  * finns: gör inget. allt är ok.
+#  * inte finns: skapa det
+
+
+# SKAPA
+# konto finns inte i någon av dom - skapa först i locke, sedan i sally
+# konto finns i sally - skapa i locke, ge sedan tillgång
+# konto finns i locke - testa om angivna uppgifter stämmer; isåfall skapa i sally
+# konto finns i båda - kan inte skapa användare
+
+# ACCESS
+# om kontot saknas någonstans så är det access denied.

@@ -6,6 +6,38 @@ mongojs = require 'mongojs'
 underline = require 'underline'
 viaduct = require 'viaduct-server'
 
+
+if process.env.NODE_ENV == 'production'
+
+  lockeMock = require './locke-client'
+
+  lockeAuth = (username, token, callback) ->
+    lockeMock.authToken 'sally', username, token, (err, res) ->
+      callback(err, true)
+
+else
+
+  lockeMock = require '../locke/src/expoapi'
+
+  lockeMock.mockApp = (app, callback) ->
+    email = 'owning-user-' + app
+    password = 'allfornought'
+    lockeMock.createUser 'locke', email, password, ->
+      lockeMock.authPassword 'locke', email, password, 86400, (err, res) ->
+        lockeMock.createApp email, res.token, app, callback
+
+  lockeAuth = (username, password, callback) ->
+    lockeMock.authPassword 'sally', username, password, 86400, (err, res) ->
+      return callback(err) if err
+      return callback(null, false) if !res.token?
+      lockeMock.authToken 'sally', username, res.token, (err, res) ->
+        callback(err, true)
+
+
+
+
+
+
 api = db.create()
 
 
@@ -22,24 +54,27 @@ getUserFromDb = (req, callback) ->
   code = req.headers.authorization.slice(6)
   au = new Buffer(code, 'base64').toString('ascii').split(':')
   username = au[0]
-  password = au[1]
+  token = au[1]
 
-  async.map ['admins', 'users'], (collection, callback) ->
-    getUserConnection[collection].find { username: username, password: password }, callback
-  , (err, results) ->
-    if err
+  lockeAuth username, token, (err, authed) ->
+    return callback(null, null) if err || !authed
+
+    async.map ['admins', 'users'], (collection, callback) ->
+      getUserConnection[collection].find { username: username }, callback
+    , (err, results) ->
+      if err
+        callback(null, null)
+        return
+
+      if results[1].length > 0
+        callback(null, { account: results[1][0].account, id: results[1][0]._id, accountAdmin: results[1][0].accountAdmin })
+        return
+
+      if results[0].length > 0
+        callback(null, { admin: true })
+        return
+
       callback(null, null)
-      return
-
-    if results[1].length > 0
-      callback(null, { account: results[1][0].account, id: results[1][0]._id, accountAdmin: results[1][0].accountAdmin })
-      return
-
-    if results[0].length > 0
-      callback(null, { admin: true })
-      return
-
-    callback(null, null)
 
 adminWrap = (f) -> (user) ->
   return null if !user?
@@ -70,27 +105,23 @@ mod =
 
   admins:
     auth: adminWrap (user) -> null
-    fieldFilter: (user) -> ['password']
     fields:
       username:
         type: 'string'
         required: true
         unqiue: true
         validate: valUniqueInModel('users', 'username')
-      password: { type: 'string', required: true }
 
   users:
     auth: adminWrap (user) -> if user.accountAdmin then { account: user.account } else { id: user.id }
     authCreate: adminWrap (user) -> if user.accountAdmin then { account: user.account } else null
     owners: account: 'accounts'
-    fieldFilter: (user) -> ['password']
     fields:
       username:
         type: 'string'
         required: true
         unique: true
         validate: valUniqueInModel('admins', 'username')
-      password: { type: 'string', required: true }
       accountAdmin: { type: 'boolean', default: false }
 
   companies:
@@ -98,8 +129,12 @@ mod =
     owners: account: 'accounts'
     fields:
       name: { type: 'string', default: '' }
-      notes: { type: 'string', default: '' }
+      orgnr: { type: 'string', default: '' }
       address: { type: 'string', default: '' }
+      zip: { type: 'string', default: '' }
+      city: { type: 'string', default: '' }
+      notes: { type: 'string', default: '' }
+      about: { type: 'string', default: '' }
 
   projects:
     auth: defaultAuth()
@@ -185,6 +220,9 @@ exports.run = (settings, callback) ->
         return
 
       onGo = ->
+
+        # I signup-processen så måste ju locke komma in på något sätt
+        # Alternativ att klienten skapar ett locke-konto samtidigt
         apa.verb app, 'signup', (req, res) ->
           api.post 'accounts', { name: req.body.account }, (err, accountData) ->
             if err
@@ -192,14 +230,27 @@ exports.run = (settings, callback) ->
               return
 
             accountId = accountData.id.toString()
-            api.post 'users', { account: accountId, username: req.body.username, password: req.body.password, accountAdmin: true }, (err, userData) ->
-              if err
-                api.delOne 'accounts', { id: accountId }, (err, delData) ->
-                  apa.respond(req, res, { err: 'Could not create user' }, 400)
-              else
-                if mod.accounts.naturalId?
-                  accountData.id = accountData[mod.accounts.naturalId]
-                apa.respond(req, res, accountData)
+            lockeMock.createUser 'sally', req.body.username, req.body.password, ->
+              api.post 'users', { account: accountId, username: req.body.username, accountAdmin: true }, (err, userData) ->
+                if err
+                  api.delOne 'accounts', { id: accountId }, (err, delData) ->
+                    apa.respond(req, res, { err: 'Could not create user' }, 400)
+                else
+                  if mod.accounts.naturalId?
+                    accountData.id = accountData[mod.accounts.naturalId]
+                  apa.respond(req, res, accountData)
+
+        app.post '/admins', (req, res, next) ->
+          username = req.body.username
+          password = req.body.password
+          lockeMock.createUser 'sally', username, password, ->
+            next()
+
+        app.post '/accounts/:account/users', (req, res, next) ->
+          username = req.body.username || ''
+          password = req.body.password || ''
+          lockeMock.createUser 'sally', username, password, ->
+            next()
 
         apa.exec app, api, getUserFromDb, mod
         app.listen nconf.get('port')
@@ -208,12 +259,15 @@ exports.run = (settings, callback) ->
       if data.length > 0
         onGo()
       else
-        api.post 'admins', { username: 'admin', password: 'admin' }, (err) ->
-          if err
-            console.log(err)
-            process.exit(1)
-          else
-            onGo()
+        lockeMock.mockApp 'sally', ->
+          lockeMock.createUser 'sally', 'admin0', 'admin0', ->
+            console.log arguments
+            api.post 'admins', { username: 'admin0', password: 'admin0' }, (err) ->
+              if err
+                console.log(err)
+                process.exit(1)
+              else
+                onGo()
 
 process.on 'uncaughtException', (ex) ->
   console.log 'Uncaught exception:', ex.message

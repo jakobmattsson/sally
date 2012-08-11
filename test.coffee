@@ -33,30 +33,30 @@ query('No resource')
 
 
 query('Can get accouts as admin')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .get('/accounts')
 .res('Got accounts')
 .run()
 
 
 query('User can only get own account')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/accounts', { name: 'a1' })
 .res('Created account', save 'account')
 .post('/accounts', { name: 'a2' })
 .res('Created another account', save 'account2')
-.post('/accounts/#{account}/users', { username: 'u1', password: 'pass' })
+.post('/accounts/#{account}/users', { username: 'u1', password: 'passpass' })
 .res('Created user', save 'user')
 .get('/accounts')
 .res('Got all accounts as admin', (data) -> data.length.should.be.above 1)
-.auth('u1', 'pass')
+.auth('u1', 'passpass')
 .get('/accounts')
 .res('Get just one account as user', (data) -> data.length.should.eql 1)
 .run()
 
 
 query('There cant exist a user and an admin with the same name')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/admins', { username: 'collidingName', password: 'somepassword' })
 .post('/accounts', { name: 'a3' })
 .res('Created account', save 'account')
@@ -68,18 +68,18 @@ query('There cant exist a user and an admin with the same name')
 
 
 query('No one can access password for admins or users')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/admins', { username: 'admin1', password: 'admin1' })
 .res('Created admin', save 'admin')
 .post('/accounts', { name: 'a4' })
 .res('Created account', save 'account')
-.post('/accounts/#{account}/users', { username: 'user1', password: 'user1' })
-.post('/accounts/#{account}/users', { username: 'user2', password: 'user2', accountAdmin: true })
+.post('/accounts/#{account}/users', { username: 'user1', password: 'user1_' })
+.post('/accounts/#{account}/users', { username: 'user2', password: 'user2_', accountAdmin: true })
 .get('/admins/#{admin}')
 .res('Gets all admin info, except password', (data) -> data.should.have.keys('username', 'id'))
 .get('/accounts/#{account}/users')
 .res('Gets all user info, except password', (data) -> data.forEach (x) -> x.should.have.keys('username', 'id', 'accountAdmin', 'account'))
-.auth('user1', 'user1')
+.auth('user1', 'user1_')
 .get('/accounts/#{account}/users')
 .res('Gets all user info, except password, as user', (data) -> data.forEach (x) -> x.should.have.keys('username', 'id', 'accountAdmin', 'account'))
 .run()
@@ -87,21 +87,21 @@ query('No one can access password for admins or users')
 
 
 query('Users can only see themselves, unless they are account admins, in which case they can see the same account')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/accounts', { name: 'a5' })
 .res('Created account', save 'account1')
-.post('/accounts/#{account1}/users', { username: 'user1', password: 'user1' })
-.post('/accounts/#{account1}/users', { username: 'user2', password: 'user2', accountAdmin: true })
+.post('/accounts/#{account1}/users', { username: 'user1', password: 'user1_' })
+.post('/accounts/#{account1}/users', { username: 'user2', password: 'user2_', accountAdmin: true })
 .post('/accounts', { name: 'a6' })
 .res('Created account', save 'account2')
-.post('/accounts/#{account2}/users', { username: 'user3', password: 'user3', accountAdmin: true })
-.auth('user1', 'user1')
+.post('/accounts/#{account2}/users', { username: 'user3', password: 'user3_', accountAdmin: true })
+.auth('user1', 'user1_')
 .get('/users')
 .res('Regular user sees only himself', (data) -> data.should.have.lengthOf(1); data[0].username.should.eql('user1'))
-.auth('user2', 'user2')
+.auth('user2', 'user2_')
 .get('/users')
 .res('Admin user sees all users in same account', (data) -> data.should.have.lengthOf(2); data[0].username.should.eql('user1'); data[1].username.should.eql('user2');)
-.auth('user3', 'user3')
+.auth('user3', 'user3_')
 .get('/users')
 .res('Lone admin user user sees only himself', (data) -> data.should.have.lengthOf(1); data[0].username.should.eql('user3'))
 .run()
@@ -112,21 +112,21 @@ query('Users can only see themselves, unless they are account admins, in which c
 
 
 query('No resource')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .get('/foobar')
 .err(400, 'No such resource')
 .run()
 
 
 query('No id')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .get('/companies/123456781234567812345678')
 .err(400, 'No such id')
 .run()
 
 
 query('Testing so invalid IDs return the same error message as nonexisting IDs')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .get('/companies/1234')
 .err(400, 'No such id')
 .run()
@@ -134,17 +134,17 @@ query('Testing so invalid IDs return the same error message as nonexisting IDs')
 
 
 query('Creating companies')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/accounts', { name: 'a7' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
-.res('Created company', (data) -> data.should.have.keys ['id', 'notes', 'name', 'address', 'account'])
+.res('Created company', (data) -> data.should.have.keys ['id', 'notes', 'name', 'address', 'account', 'orgnr', 'city', 'zip', 'about'])
 .run()
 
 
 
 query('Attempting to save nonexisting field')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/accounts', { name: 'a8' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -156,7 +156,7 @@ query('Attempting to save nonexisting field')
 
 
 query('Ensure that PUT-operations are atomic')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/accounts', { name: 'a9' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -171,7 +171,7 @@ query('Ensure that PUT-operations are atomic')
 
 
 query('Attempting to override id')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/accounts', { name: 'a10' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -183,7 +183,7 @@ query('Attempting to override id')
 
 
 query('Attempting to override _id')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/accounts', { name: 'a11' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -195,7 +195,7 @@ query('Attempting to override _id')
 
 
 query('Cascading delete')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/accounts', { name: 'a12' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -233,7 +233,7 @@ query('Cascading delete')
 
 
 query('Meeting pointing to a valid call or nothing')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/accounts', { name: 'a13' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -269,7 +269,7 @@ query('Meeting pointing to a valid call or nothing')
 
 
 query('Nulling foreign keys when pointed item is removed')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/accounts', { name: 'a15' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -292,7 +292,7 @@ query('Nulling foreign keys when pointed item is removed')
 
 
 query('Create many-to-many relation')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/accounts', { name: 'a16' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -344,74 +344,84 @@ query('Test meta owns')
 query('Test meta fields')
 .get('/meta/accounts').res('Meta fields for accounts', (data) -> data.fields.should.eql [{ name: 'id', type: 'string', readonly: true, required: false }, { name: 'name', type: 'string', readonly: false, required: true }])
 .get('/meta/projects').res('Meta fields for projects', (data) -> data.fields.should.eql [{ name: 'account', type: 'string', readonly: true, required: false }, { name: 'company', type: 'string', readonly: true, required: false }, { name: 'description', type: 'string', readonly: false, required: false }, { name: 'id', type: 'string', readonly: true, required: false }, { name: 'value', type: 'number', readonly: false, required: false }])
-.get('/meta/companies').res('Meta fields for companies', (data) -> data.fields.should.eql [{ name: 'account', type: 'string', readonly: true, required: false }, { name: 'address', type: 'string', readonly: false, required: false }, { name: 'id', type: 'string', readonly: true, required: false }, { name: 'name', type: 'string', readonly: false, required: false }, { name: 'notes', type: 'string', readonly: false, required: false }])
+.get('/meta/companies').res('Meta fields for companies', (data) -> data.fields.should.eql([
+  { name: 'about', type: 'string', readonly: false, required: false }
+  { name: 'account', type: 'string', readonly: true, required: false }
+  { name: 'address', type: 'string', readonly: false, required: false }
+  { name: 'city', type: 'string', readonly: false, required: false }
+  { name: 'id', type: 'string', readonly: true, required: false }
+  { name: 'name', type: 'string', readonly: false, required: false }
+  { name: 'notes', type: 'string', readonly: false, required: false }
+  { name: 'orgnr', type: 'string', readonly: false, required: false }
+  { name: 'zip', type: 'string', readonly: false, required: false }
+]))
 .run()
 
 
 
 query('Creating users')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/accounts', { name: 'a17' })
 .res('Created account', save 'account')
-.post('/accounts/#{account}/users', { username: 'foo', password: 'baz' })
+.post('/accounts/#{account}/users', { username: 'foo', password: 'bazbaz' })
 .res('Created user', (data) -> data.should.include { username: 'foo', accountAdmin: false })
 .run()
 
 
 
 query('Attempting to create another user with the same username')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/accounts', { name: 'a18' })
 .res('Created account', save 'account')
-.post('/accounts/#{account}/users', { username: 'foo', password: 'baz' })
+.post('/accounts/#{account}/users', { username: 'foo', password: 'bazbaz' })
 .err(400, "Duplicate value 'foo' for username")
 .run()
 
 
 
 query('Attempting to create user without username or password')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/accounts', { name: 'a19' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users')
-.err(400, 'ValidationError: Validator "required" failed for path password, Validator "required" failed for path username')
+.err(400, 'ValidationError: Validator "required" failed for path username')
 .run()
 
 
 
 query('Setting a boolean type by passing in any truthy value')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/accounts', { name: 'a20' })
 .res('Created account', save 'account')
-.post('/accounts/#{account}/users', { username: 'foobar', password: 'baz', accountAdmin: 'yes' })
+.post('/accounts/#{account}/users', { username: 'foobar', password: 'bazbaz', accountAdmin: 'yes' })
 .res('Created user', (data) -> data.should.include { username: 'foobar', accountAdmin: true })
 .run()
 
 
 
 query('Setting a boolean type by passing in any falsy value')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/accounts', { name: 'a21' })
 .res('Created account', save 'account')
-.post('/accounts/#{account}/users', { username: 'foz', password: 'baz', accountAdmin: 0 })
+.post('/accounts/#{account}/users', { username: 'foz', password: 'bazbaz', accountAdmin: 0 })
 .res('Created user', (data) -> data.should.include { username: 'foz', accountAdmin: false })
 .run()
 
 
 
 query('Testing security access between accounts')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/accounts', { name: 'a22' })
 .res('Created account #1', save 'account1')
-.post('/accounts/#{account1}/users', { username: 'test_u1', 'password': '123' })
+.post('/accounts/#{account1}/users', { username: 'test_u1', 'password': '123baz' })
 .res('Created user #1', save 'user1')
 .post('/accounts/#{account1}/companies')
 .res('Created company #1', save 'company1')
 .post('/accounts', { name: 'a23' })
 .res('Created account #2', save 'account2')
-.post('/accounts/#{account2}/users', { username: 'test_u2', 'password': '123', accountAdmin: true })
+.post('/accounts/#{account2}/users', { username: 'test_u2', 'password': '123baz', accountAdmin: true })
 .res('Created user #2', save 'user2')
-.auth('test_u2', '123')
+.auth('test_u2', '123baz')
 .get('/accounts/#{account1}')
 .err(400, 'No such id')
 .del('/accounts/#{account1}')
@@ -427,28 +437,28 @@ query('Testing security access between accounts')
 
 
 query('Testing read, write and create auths for accounts')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/accounts', { name: 'a24' })
 .res('Created account #1', save 'account1')
 .post('/accounts', { name: 'a25' })
 .res('Created account #2', save 'account2')
-.post('/accounts/#{account1}/users', { username: 'ua1', password: 'p', accountAdmin: true })
+.post('/accounts/#{account1}/users', { username: 'ua1', password: 'p12345', accountAdmin: true })
 .res('Created user #1', save 'user1')
-.post('/accounts/#{account1}/users', { username: 'ua2', password: 'p', accountAdmin: false })
+.post('/accounts/#{account1}/users', { username: 'ua2', password: 'p12345', accountAdmin: false })
 .res('Created user #2', save 'user2')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .get('/accounts')
 .res('Reading accounts as admin', (data) -> data.length.should.be.above 1)
 .put('/accounts/#{account1}', { name: 'new_name' })
 .res('Updating account as admin', (data) -> data.should.include { name: 'new_name' }; @account1 = 'new_name')
-.auth('ua1', 'p')
+.auth('ua1', 'p12345')
 .get('/accounts')
 .res('Reading accounts as account admin', (data) -> data.should.have.lengthOf 1)
 .put('/accounts/#{account1}', { name: 'new_name_again' })
 .res('Updating account as account admin', (data) -> data.should.include { name: 'new_name_again' }; @account1 = 'new_name_again')
 .post('/accounts', { name: 'a26' })
 .err(401, 'unauthed')
-.auth('ua2', 'p')
+.auth('ua2', 'p12345')
 .get('/accounts')
 .res('Reading accounts as user', (data) -> data.should.have.lengthOf 1)
 .put('/accounts/#{account1}', { name: 'new_name_again' })
@@ -460,7 +470,7 @@ query('Testing read, write and create auths for accounts')
 
 
 query('Special signup route')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/accounts', { name: 'busyAccount' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'busyUser', password: 'some_password' })
@@ -483,7 +493,7 @@ query('Special signup route')
 
 
 query('Special signup route')
-.auth('admin', 'admin')
+.auth('admin0', 'admin0')
 .post('/accounts', { name: 'natural' })
 .res('Making sure the name is used as the natural id', (data) -> data.should.eql { id: 'natural', name: 'natural' })
 .run()
