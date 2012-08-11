@@ -262,7 +262,6 @@ exports.run = (settings, callback) ->
       else
         lockeMock.mockApp 'sally', ->
           lockeMock.createUser 'sally', 'admin0', 'admin0', ->
-            console.log arguments
             api.post 'admins', { username: 'admin0', password: 'admin0' }, (err) ->
               if err
                 console.log(err)
