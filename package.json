@@ -1,6 +1,6 @@
 {
   "name": "sally",
-  "description": "Dead simple CRM",
+  "description": "Dead simple CRM (api)",
   "main": "starter.js",
   "version": "0.3.5",
   "author": "Jakob Mattsson <jakob.mattsson@gmail.com> (jakobmattsson.se)",
@@ -26,7 +26,7 @@
   },
   "subdomain": "sally",
   "domains": [
-    "sally.jdevab.com"
+    "api.sally.jdevab.com"
   ],
   "scripts": {
     "test": "mocha -t 5000 -R list --compilers coffee:coffee-script -b test.coffee",
