@@ -3,8 +3,9 @@ apa = require 'rester'
 async = require 'async'
 nconf = require 'nconf'
 mongojs = require 'mongojs'
-underline = require 'underline'
 viaduct = require 'viaduct-server'
+_ = require 'underscore'
+_.mixin require 'underscore.plus'
 
 
 if process.env.NODE_ENV == 'production'
@@ -83,12 +84,12 @@ adminWrap = (f) -> (user) ->
 
 
 defaultAuth = (targetProperty) -> adminWrap (user) ->
-  return underline.makeObject(targetProperty || 'account', user.account) if user.account
+  return _.makeObject(targetProperty || 'account', user.account) if user.account
   return null
 
 
 valUniqueInModel = (model, property) -> (value, callback) ->
-  api.list model, underline.makeObject(property, value), (err, data) ->
+  api.list model, _.makeObject(property, value), (err, data) ->
     callback(!err && data.length == 0)
 
 
