@@ -201,12 +201,11 @@ exports.run = (settings, callback) ->
 
   nconf.env().argv().defaults
     mongo: 'mongodb://localhost/sally'
-    NODE_ENV: 'development'
     port: 3000
 
   console.log("Starting up")
   console.log("Environment mongo:", nconf.get('mongo'))
-  console.log("Environment NODE_ENV:", nconf.get('NODE_ENV'))
+  console.log("Envornment NODE_ENV:", process.env.NODE_ENV)
   console.log("Environment port:", nconf.get('port'))
 
   api.connect nconf.get('mongo'), (err) ->
