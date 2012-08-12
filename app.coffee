@@ -129,7 +129,6 @@ mod =
       city: { type: 'string', default: '' }
       notes: { type: 'string', default: '' }
       about: { type: 'string', default: '' }
-      nextStep: { type: 'string', default: '' }
       nextCall: { type: 'date' }
       nextCallStrict: { type: 'boolean' }
       seller: { type: 'hasOne', model: 'users' }
@@ -146,9 +145,9 @@ mod =
     owners: company: 'companies'
     fields:
       body: { type: 'string', default: '' }
-      when: { type: 'date', required: true }
-      seller: { type: 'hasOne', model: 'users', required: true }
-      contact: { type: 'hasOne', model: 'contacts', required: true }
+      when: { type: 'date', required: false }
+      seller: { type: 'hasOne', model: 'users', required: false }
+      contact: { type: 'hasOne', model: 'contacts', required: false }
 
   calls:
     auth: defaultAuth()
@@ -156,9 +155,9 @@ mod =
     fields:
       notes: { type: 'string', default: '' }
       answered: { type: 'boolean' }
-      when: { type: 'date', required: true }
-      seller: { type: 'hasOne', model: 'users', required: true }
-      contact: { type: 'hasOne', model: 'contacts', required: true }
+      when: { type: 'date', required: false }
+      seller: { type: 'hasOne', model: 'users', required: false }
+      contact: { type: 'hasOne', model: 'contacts', required: false }
 
   meetings:
     auth: defaultAuth()
@@ -166,7 +165,13 @@ mod =
     fields:
       notes: { type: 'string', default: '' }
       when: { type: 'date', default: '' }
-      origin: { type: 'hasOne', model: 'calls' }
+      origin:
+        type: 'hasOne'
+        model: 'calls'
+        validation: (meeting, call, callback) ->
+          if meeting.company.toString() != call.company.toString()
+            callback 'The origin call does not belong to the same company as the meeting'
+          callback()
       # This is a many-to-many relationship. The name of the attribute must be unique among
       # models and other many-to-many relationships as it will be used as a url-component.
       # Write a check for it and write a test that proves it.

@@ -138,7 +138,7 @@ query('Creating companies')
 .post('/accounts', { name: 'a7' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
-.res('Created company', (data) -> data.should.have.keys ['id', 'notes', 'name', 'address', 'account', 'orgnr', 'city', 'zip', 'about', 'nextStep'])
+.res('Created company', (data) -> data.should.have.keys ['id', 'notes', 'name', 'address', 'account', 'orgnr', 'city', 'zip', 'about'])
 .run()
 
 
@@ -311,12 +311,15 @@ query('Create many-to-many relation')
   data[1].should.include { company: @company, id: @contact2 }
 )
 .get('/attendees/#{contact1}/meetings')
-.res('Getting the meetings from an attendant', (data) -> data.should.eql [{
-  attendees: [@contact1, @contact2]
-  company: @company
-  notes: ''
-  id: @meeting
-}])
+.res('Getting the meetings from an attendant', (data) ->
+  data.should.have.lengthOf(1)
+  data[0].should.have.property 'account'
+  data[0].attendees.should.eql [@contact1, @contact2]
+  data[0].should.have.property 'company', @company
+  data[0].should.have.property 'notes', ''
+  data[0].should.have.property 'when', null
+  data[0].should.have.property 'id', @meeting
+)
 .del('/meetings/#{meeting}/attendees/#{contact1}')
 .res('Removed contact from meeting', (data) -> data.id.should.eql @contact1)
 .del('/attendees/#{contact2}/meetings/#{meeting}')
@@ -333,7 +336,7 @@ query('Create many-to-many relation')
 
 query('Test meta owns')
 .get('/meta/accounts').res('Meta for accounts', (data) -> data.owns.should.eql ['users', 'companies'])
-.get('/meta/companies').res('Meta for companies', (data) -> data.owns.should.eql ['projects', 'calls', 'meetings', 'contacts'])
+.get('/meta/companies').res('Meta for companies', (data) -> data.owns.should.eql ['projects', 'emails', 'calls', 'meetings', 'contacts'])
 .get('/meta/calls').res('Meta for calls', (data) -> data.owns.should.eql [])
 .get('/meta/meetings').res('Meta for meetings', (data) -> data.owns.should.eql [])
 .get('/meta/projects').res('Meta for projects', (data) -> data.owns.should.eql [])
@@ -343,15 +346,16 @@ query('Test meta owns')
 
 query('Test meta fields')
 .get('/meta/accounts').res('Meta fields for accounts', (data) -> data.fields.should.eql [{ name: 'id', type: 'string', readonly: true, required: false }, { name: 'name', type: 'string', readonly: false, required: true }])
-.get('/meta/projects').res('Meta fields for projects', (data) -> data.fields.should.eql [{ name: 'account', type: 'string', readonly: true, required: false }, { name: 'company', type: 'string', readonly: true, required: false }, { name: 'description', type: 'string', readonly: false, required: false }, { name: 'id', type: 'string', readonly: true, required: false }, { name: 'value', type: 'number', readonly: false, required: false }])
+.get('/meta/projects').res('Meta fields for projects', (data) -> data.fields.should.eql [{ name: 'account', type: 'string', readonly: true, required: true }, { name: 'company', type: 'string', readonly: true, required: true }, { name: 'description', type: 'string', readonly: false, required: false }, { name: 'id', type: 'string', readonly: true, required: false }, { name: 'value', type: 'number', readonly: false, required: false }])
 .get('/meta/companies').res('Meta fields for companies', (data) -> data.fields.should.eql([
   { name: 'about', type: 'string', readonly: false, required: false }
-  { name: 'account', type: 'string', readonly: true, required: false }
+  { name: 'account', type: 'string', readonly: true, required: true }
   { name: 'address', type: 'string', readonly: false, required: false }
   { name: 'city', type: 'string', readonly: false, required: false }
   { name: 'id', type: 'string', readonly: true, required: false }
   { name: 'name', type: 'string', readonly: false, required: false }
-  { name: 'nextStep', type: 'string', readonly: false, required: false }
+  { name: 'nextCall', type: 'date', readonly: false, required: false }
+  { name: 'nextCallStrict', type: 'boolean', readonly: false, required: false }
   { name: 'notes', type: 'string', readonly: false, required: false }
   { name: 'orgnr', type: 'string', readonly: false, required: false }
   { name: 'seller', type: 'string', readonly: false, required: false }
