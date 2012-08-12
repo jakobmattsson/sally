@@ -78,10 +78,10 @@ query('No one can access password for admins or users')
 .get('/admins/#{admin}')
 .res('Gets all admin info, except password', (data) -> data.should.have.keys('username', 'id'))
 .get('/accounts/#{account}/users')
-.res('Gets all user info, except password', (data) -> data.forEach (x) -> x.should.have.keys('username', 'id', 'accountAdmin', 'account'))
+.res('Gets all user info, except password', (data) -> data.forEach (x) -> x.should.have.keys('username', 'id', 'accountAdmin', 'account', 'nickname'))
 .auth('user1', 'user1_')
 .get('/accounts/#{account}/users')
-.res('Gets all user info, except password, as user', (data) -> data.forEach (x) -> x.should.have.keys('username', 'id', 'accountAdmin', 'account'))
+.res('Gets all user info, except password, as user', (data) -> data.forEach (x) -> x.should.have.keys('username', 'id', 'accountAdmin', 'account', 'nickname'))
 .run()
 
 
@@ -138,7 +138,7 @@ query('Creating companies')
 .post('/accounts', { name: 'a7' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
-.res('Created company', (data) -> data.should.have.keys ['id', 'notes', 'name', 'address', 'account', 'orgnr', 'city', 'zip', 'about'])
+.res('Created company', (data) -> data.should.have.keys ['id', 'notes', 'name', 'address', 'account', 'orgnr', 'city', 'zip', 'about', 'nextStep'])
 .run()
 
 
@@ -351,8 +351,10 @@ query('Test meta fields')
   { name: 'city', type: 'string', readonly: false, required: false }
   { name: 'id', type: 'string', readonly: true, required: false }
   { name: 'name', type: 'string', readonly: false, required: false }
+  { name: 'nextStep', type: 'string', readonly: false, required: false }
   { name: 'notes', type: 'string', readonly: false, required: false }
   { name: 'orgnr', type: 'string', readonly: false, required: false }
+  { name: 'seller', type: 'string', readonly: false, required: false }
   { name: 'zip', type: 'string', readonly: false, required: false }
 ]))
 .run()
@@ -496,4 +498,22 @@ query('Special signup route')
 .auth('admin0', 'admin0')
 .post('/accounts', { name: 'natural' })
 .res('Making sure the name is used as the natural id', (data) -> data.should.eql { id: 'natural', name: 'natural' })
+.run()
+
+
+
+query('Setting the seller for a company')
+.auth('admin0', 'admin0')
+.post('/accounts', { name: 'a30' })
+.res('Created account', save 'account')
+.post('/accounts/#{account}/users', { username: 'foo30', password: 'bazbaz', accountAdmin: true })
+.res('Created user', save 'u1')
+.post('/accounts/#{account}/users', { username: 'foo31', password: 'bazbaz', accountAdmin: false })
+.res('Created user', save 'u2')
+.post('/accounts/#{account}/companies', { name: 'cool ab' })
+.res('Created company', save 'company')
+.res('Getting new account', (data) -> data.should.include { seller: undefined })
+.put('/companies/#{company}', -> { seller: this.u1 })
+.get('/companies/#{company}')
+.res('Getting new company', (data) -> data.should.include { seller: this.u1 })
 .run()

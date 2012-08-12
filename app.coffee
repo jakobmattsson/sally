@@ -107,22 +107,15 @@ mod =
   admins:
     auth: adminWrap (user) -> null
     fields:
-      username:
-        type: 'string'
-        required: true
-        unqiue: true
-        validate: valUniqueInModel('users', 'username')
+      username: { type: 'string', required: true, unique: true, validate: valUniqueInModel('users', 'username') }
 
   users:
     auth: adminWrap (user) -> if user.accountAdmin then { account: user.account } else { id: user.id }
     authCreate: adminWrap (user) -> if user.accountAdmin then { account: user.account } else null
     owners: account: 'accounts'
     fields:
-      username:
-        type: 'string'
-        required: true
-        unique: true
-        validate: valUniqueInModel('admins', 'username')
+      username: { type: 'string', required: true, unique: true, validate: valUniqueInModel('admins', 'username') }
+      nickname: { type: 'string', default: '' }
       accountAdmin: { type: 'boolean', default: false }
 
   companies:
@@ -136,6 +129,10 @@ mod =
       city: { type: 'string', default: '' }
       notes: { type: 'string', default: '' }
       about: { type: 'string', default: '' }
+      nextStep: { type: 'string', default: '' }
+      nextCall: { type: 'date' }
+      nextCallStrict: { type: 'boolean' }
+      seller: { type: 'hasOne', model: 'users' }
 
   projects:
     auth: defaultAuth()
@@ -144,34 +141,36 @@ mod =
       description: { type: 'string', default: '' }
       value: { type: 'number', default: null }
 
+  emails:
+    auth: defaultAuth()
+    owners: company: 'companies'
+    fields:
+      body: { type: 'string', default: '' }
+      when: { type: 'date', required: true }
+      seller: { type: 'hasOne', model: 'users', required: true }
+      contact: { type: 'hasOne', model: 'contacts', required: true }
+
   calls:
     auth: defaultAuth()
     owners: company: 'companies'
     fields:
       notes: { type: 'string', default: '' }
+      answered: { type: 'boolean' }
+      when: { type: 'date', required: true }
+      seller: { type: 'hasOne', model: 'users', required: true }
+      contact: { type: 'hasOne', model: 'contacts', required: true }
 
   meetings:
     auth: defaultAuth()
     owners: company: 'companies'
     fields:
       notes: { type: 'string', default: '' }
-
+      when: { type: 'date', default: '' }
+      origin: { type: 'hasOne', model: 'calls' }
       # This is a many-to-many relationship. The name of the attribute must be unique among
       # models and other many-to-many relationships as it will be used as a url-component.
       # Write a check for it and write a test that proves it.
       attendees: { type: 'hasMany', model: 'contacts' }
-
-      origin:
-        type: 'hasOne'
-        model: 'calls'
-
-        # Denna validering är någon form av "common ancestor".
-        # I och med redundansen så är det väldigt lätt att generalisera.
-        # commonAncestors: ['company']
-        validation: (meeting, call, callback) ->
-          if meeting.company.toString() != call.company.toString()
-            callback 'The origin call does not belong to the same company as the meeting'
-          callback()
 
   contacts:
     auth: defaultAuth()
@@ -179,6 +178,7 @@ mod =
     fields:
       notes: { type: 'string', default: '' }
       name:  { type: 'string', default: '' }
+      role:  { type: 'string', default: '' }
       phone: { type: 'string', default: '' }
       email: { type: 'string', default: '' }
 
