@@ -10,13 +10,13 @@
   "dependencies": {
     "coffee-script": "1.3.x",
     "mongoose": "2.6.x",
-    "manikin-mongodb": "0.2.1",
+    "manikin-mongodb": "0.3.1",
     "nconf": "0.5.x",
     "request": "2.10.x",
     "mongojs": "0.4.x",
     "rester": "0.2.1",
     "underscore": "1.3.x",
-    "underscore.plus": "0.2.0",
+    "underscore.plus": "0.2.1",
     "async": "0.1.x",
     "viaduct-server": "0.2.0",
     "express": "2.5.x"
