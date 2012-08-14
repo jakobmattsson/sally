@@ -264,12 +264,14 @@ exports.run = (settings, callback) ->
                     accountData.id = accountData[mod.accounts.naturalId]
                   apa.respond(req, res, accountData)
 
+        # behövs denna?
         app.post '/admins', (req, res, next) ->
           username = req.body.username
           password = req.body.password
           lockeMock.createUser 'sally', username, password, ->
             next()
 
+        # behövs denna?
         app.post '/accounts/:account/users', (req, res, next) ->
           username = req.body.username || ''
           password = req.body.password || ''
