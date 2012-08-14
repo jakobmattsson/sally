@@ -552,3 +552,63 @@ query('Setting the seller for a company')
 .get('/companies/#{company}')
 .res('Getting new company', (data) -> data.should.include { seller: this.u1 })
 .run()
+
+
+
+query('An admin should not be able to create a user without specing an account')
+.auth('admin0', 'admin0')
+.post('/users', { name: 'u2-1' })
+.err(400, 'Missing owner')
+.run()
+
+
+
+query('An account admin should be able to create a user without specing an account')
+.auth('admin0', 'admin0')
+.post('/accounts', { name: 'a101' })
+.res('Created account', save 'account')
+.post('/accounts/#{account}/users', { username: 'a101-u1', password: 'p1p1p1', accountAdmin: true })
+.res('Created user', save 'user')
+.auth('a101-u1', 'p1p1p1')
+.post('/users', { username: 'a101-u2' })
+.res('Created user', (data) -> data.should.include { username: 'a101-u2', accountAdmin: false })
+.run()
+
+
+
+query('A regular user should not be able to create a user without specing an account')
+.auth('admin0', 'admin0')
+.post('/accounts', { name: 'a102' })
+.res('Created account', save 'account')
+.post('/accounts/#{account}/users', { username: 'a102-u1', password: 'p1p1p1', accountAdmin: false })
+.res('Created user', save 'user')
+.auth('a102-u1', 'p1p1p1')
+.post('/users', { name: 'a102-u2' })
+.err(401)
+.run()
+
+
+
+query('A regular user should be able to create a company without specing an account')
+.auth('admin0', 'admin0')
+.post('/accounts', { name: 'a103' })
+.res('Created account', save 'account')
+.post('/accounts/#{account}/users', { username: 'a103-u1', password: 'p1p1p1', accountAdmin: false })
+.res('Created user', save 'user')
+.auth('a103-u1', 'p1p1p1')
+.post('/companies', { name: 'a103-name' })
+.res('Created company', (data) -> data.should.include { name: 'a103-name', orgnr: '' })
+.run()
+
+
+
+query('A regular user should be able to create a meeting without specing a company')
+.auth('admin0', 'admin0')
+.post('/accounts', { name: 'a104' })
+.res('Created account', save 'account')
+.post('/accounts/#{account}/users', { username: 'a104-u1', password: 'p1p1p1', accountAdmin: false })
+.res('Created user', save 'user')
+.auth('a104-u1', 'p1p1p1')
+.post('/meetings', { notes: 'testing' })
+.err(400, 'Missing owner')
+.run()
