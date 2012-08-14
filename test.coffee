@@ -475,6 +475,37 @@ query('Testing read, write and create auths for accounts')
 
 
 
+query('Special signup route (unique user)')
+.post('/signup', { username: 'u12345', password: 'p12345' })
+.res('Created account', (data) -> data.should.have.keys ['id', 'name'])
+.auth('u12345', 'p12345')
+.get('/users')
+.res('Getting new user', (data) -> data.should.have.lengthOf(1); data[0].should.include { username: 'u12345', accountAdmin: true, nickname: '' })
+.run()
+
+
+
+query('Special signup route (user that already exists)')
+.post('/signup', { username: 'u12345', password: 'p12345' })
+.err(400, 'Could not create user')
+.run()
+
+
+
+query('Special signup route (invited user)')
+.auth('admin0', 'admin0')
+.post('/accounts', { name: 'acc1' })
+.res('Created account', save 'account')
+.post('/accounts/#{account}/users', { username: 'us1234' })
+.auth()
+.post('/signup', { username: 'us1234', password: 'p12345' })
+.auth('us1234', 'p12345')
+.get('/users')
+.res('Getting new user', (data) -> data.should.have.lengthOf(1); data[0].should.include { username: 'us1234', accountAdmin: false, nickname: '' })
+.run()
+
+
+
 query('Special signup route')
 .auth('admin0', 'admin0')
 .post('/accounts', { name: 'busyAccount' })

@@ -226,29 +226,43 @@ exports.run = (settings, callback) ->
 
       onGo = ->
 
+        # TODO: This whole method must be tested in a much more exhaustive way.
         apa.verb app, 'signup', (req, res) ->
-          api.post 'accounts', { name: req.body.account || 'randomName' + new Date().getTime() }, (err, accountData) ->
-            if err
-              apa.respond(req, res, { err: 'Could not create account' }, 400)
-              return
 
-            accountId = accountData.id.toString()
-            api.post 'users', { account: accountId, username: req.body.username, accountAdmin: true }, (err, userData) ->
-              if err?
-                api.delOne 'accounts', { id: accountId }, (err, delData) ->
-                  apa.respond(req, res, { err: 'Could not create user' }, 400)
-                return
-
+          api.getOne 'users', { username: req.body.username }, (err, data) ->
+            if data?
               lockeMock.createUser 'sally', req.body.username || '', req.body.password || '', (err, data) ->
+                #err is not enough
                 if err?
-                  api.delOne 'accounts', { id: accountId }, (err, delData) ->
-                    api.delOne 'users', { id: userData.id.toString() }, (err, delData) ->
-                      apa.respond(req, res, { err: 'Could not create account' }, 400)
+                  apa.respond(req, res, { err: 'Could not create user' }, 400)
                   return
 
-                if mod.accounts.naturalId?
-                  accountData.id = accountData[mod.accounts.naturalId]
-                apa.respond(req, res, accountData)
+                apa.respond(req, res, { whatever: 'should return something useful here' })
+              return
+
+            api.post 'accounts', { name: req.body.account || 'randomName' + new Date().getTime() }, (err, accountData) ->
+              if err
+                apa.respond(req, res, { err: 'Could not create account' }, 400)
+                return
+
+              accountId = accountData.id.toString()
+              api.post 'users', { account: accountId, username: req.body.username, accountAdmin: true }, (err, userData) ->
+                if err?
+                  api.delOne 'accounts', { id: accountId }, (err, delData) ->
+                    apa.respond(req, res, { err: 'Could not create user' }, 400)
+                  return
+
+                lockeMock.createUser 'sally', req.body.username || '', req.body.password || '', (err, data) ->
+                  # err is not enough. "data" can contain a bad http status code.
+                  if err?
+                    api.delOne 'accounts', { id: accountId }, (err, delData) ->
+                      api.delOne 'users', { id: userData.id.toString() }, (err, delData) ->
+                        apa.respond(req, res, { err: 'Could not create account' }, 400)
+                    return
+
+                  if mod.accounts.naturalId?
+                    accountData.id = accountData[mod.accounts.naturalId]
+                  apa.respond(req, res, accountData)
 
         app.post '/admins', (req, res, next) ->
           username = req.body.username
