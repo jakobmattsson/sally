@@ -226,24 +226,29 @@ exports.run = (settings, callback) ->
 
       onGo = ->
 
-        # I signup-processen så måste ju locke komma in på något sätt
-        # Alternativ att klienten skapar ett locke-konto samtidigt
         apa.verb app, 'signup', (req, res) ->
-          api.post 'accounts', { name: req.body.account }, (err, accountData) ->
+          api.post 'accounts', { name: req.body.account || 'randomName' + new Date().getTime() }, (err, accountData) ->
             if err
               apa.respond(req, res, { err: 'Could not create account' }, 400)
               return
 
             accountId = accountData.id.toString()
-            lockeMock.createUser 'sally', req.body.username, req.body.password, ->
-              api.post 'users', { account: accountId, username: req.body.username, accountAdmin: true }, (err, userData) ->
-                if err
+            api.post 'users', { account: accountId, username: req.body.username, accountAdmin: true }, (err, userData) ->
+              if err?
+                api.delOne 'accounts', { id: accountId }, (err, delData) ->
+                  apa.respond(req, res, { err: 'Could not create user' }, 400)
+                return
+
+              lockeMock.createUser 'sally', req.body.username || '', req.body.password || '', (err, data) ->
+                if err?
                   api.delOne 'accounts', { id: accountId }, (err, delData) ->
-                    apa.respond(req, res, { err: 'Could not create user' }, 400)
-                else
-                  if mod.accounts.naturalId?
-                    accountData.id = accountData[mod.accounts.naturalId]
-                  apa.respond(req, res, accountData)
+                    api.delOne 'users', { id: userData.id.toString() }, (err, delData) ->
+                      apa.respond(req, res, { err: 'Could not create account' }, 400)
+                  return
+
+                if mod.accounts.naturalId?
+                  accountData.id = accountData[mod.accounts.naturalId]
+                apa.respond(req, res, accountData)
 
         app.post '/admins', (req, res, next) ->
           username = req.body.username
