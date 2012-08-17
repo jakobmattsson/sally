@@ -279,6 +279,11 @@ exports.run = (settings, callback) ->
           lockeMock.createUser 'sally', username, password, ->
             next()
 
+        # speciale
+        # app.post '/auth', (req, res) ->
+        #   getUserFromDb req, () ->
+        #     res.json({ code: 200, body: { err: null, hej: 'san' } } )
+
         apa.exec app, api, getUserFromDb, mod
         app.listen nconf.get('port')
         callback()
