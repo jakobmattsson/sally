@@ -456,12 +456,12 @@ query('Testing read, write and create auths for accounts')
 .get('/accounts')
 .res('Reading accounts as admin', (data) -> data.length.should.be.above 1)
 .put('/accounts/#{account1}', { name: 'new_name' })
-.res('Updating account as admin', (data) -> data.should.include { name: 'new_name' }; @account1 = 'new_name')
+.res('Updating account as admin', (data) -> data.should.include { name: 'new_name' })
 .auth('ua1', 'p12345')
 .get('/accounts')
 .res('Reading accounts as account admin', (data) -> data.should.have.lengthOf 1)
 .put('/accounts/#{account1}', { name: 'new_name_again' })
-.res('Updating account as account admin', (data) -> data.should.include { name: 'new_name_again' }; @account1 = 'new_name_again')
+.res('Updating account as account admin', (data) -> data.should.include { name: 'new_name_again' })
 .post('/accounts', { name: 'a26' })
 .err(401, 'unauthed')
 .auth('ua2', 'p12345')
@@ -529,11 +529,11 @@ query('Special signup route')
 
 
 
-query('Special signup route')
-.auth('admin0', 'admin0')
-.post('/accounts', { name: 'natural' })
-.res('Making sure the name is used as the natural id', (data) -> data.should.eql { id: 'natural', name: 'natural' })
-.run()
+# query('Special signup route')
+# .auth('admin0', 'admin0')
+# .post('/accounts', { name: 'natural' })
+# .res('Making sure the name is used as the natural id', (data) -> data.should.eql { id: 'natural', name: 'natural' })
+# .run()
 
 
 

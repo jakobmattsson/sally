@@ -100,7 +100,7 @@ mod =
     auth: defaultAuth('id')
     authWrite: adminWrap (user) -> if user.accountAdmin then { id: user.account } else null
     authCreate: adminWrap (user) -> null
-    naturalId: 'name'
+    # naturalId: 'name'
     fields:
       name: { type: 'string', required: true, unique: true }
 
