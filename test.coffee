@@ -1,3 +1,4 @@
+_ = require 'underscore'
 nconf = require 'nconf'
 should = require 'should'
 mongojs = require 'mongojs'
@@ -612,3 +613,16 @@ query('A regular user should be able to create a meeting without specing a compa
 .post('/meetings', { notes: 'testing' })
 .err(400, 'Missing owner')
 .run()
+
+
+query('Sorting accounts')
+.auth('admin0', 'admin0')
+.post('/accounts', { name: 'a110' })
+.res('Created account', save 'account')
+.post('/accounts/#{account}/users', { username: 'a110-u1' })
+.post('/accounts/#{account}/users', { username: 'a110-u3' })
+.post('/accounts/#{account}/users', { username: 'a110-u2' })
+.get('/accounts/#{account}/users')
+.res('Got all accounts as admin', (data) -> _(data).pluck('username').should.eql ['a110-u1', 'a110-u2', 'a110-u3'])
+.run()
+

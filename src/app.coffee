@@ -106,6 +106,7 @@ mod =
 
   admins:
     auth: adminWrap (user) -> null
+    defaultSort: 'username'
     fields:
       username: { type: 'string', required: true, unique: true, validate: valUniqueInModel('users', 'username') }
 
@@ -113,6 +114,7 @@ mod =
     auth: adminWrap (user) -> if user.accountAdmin then { account: user.account } else { id: user.id }
     authCreate: adminWrap (user) -> if user.accountAdmin then { account: user.account } else null
     owners: account: 'accounts'
+    defaultSort: 'username'
     fields:
       username: { type: 'string', required: true, unique: true, validate: valUniqueInModel('admins', 'username') }
       nickname: { type: 'string', default: '' }
@@ -121,6 +123,7 @@ mod =
   companies:
     auth: defaultAuth()
     owners: account: 'accounts'
+    defaultSort: 'name'
     fields:
       name: { type: 'string', default: '' }
       orgnr: { type: 'string', default: '' }
@@ -143,6 +146,7 @@ mod =
   emails:
     auth: defaultAuth()
     owners: company: 'companies'
+    defaultSort: 'when'
     fields:
       body: { type: 'string', default: '' }
       when: { type: 'date', required: false }
@@ -152,6 +156,7 @@ mod =
   calls:
     auth: defaultAuth()
     owners: company: 'companies'
+    defaultSort: 'when'
     fields:
       notes: { type: 'string', default: '' }
       answered: { type: 'boolean' }
@@ -162,6 +167,7 @@ mod =
   meetings:
     auth: defaultAuth()
     owners: company: 'companies'
+    defaultSort: 'when'
     fields:
       notes: { type: 'string', default: '' }
       when: { type: 'date', default: '' }
@@ -181,6 +187,7 @@ mod =
   contacts:
     auth: defaultAuth()
     owners: company: 'companies'
+    defaultSort: 'name'
     fields:
       notes: { type: 'string', default: '' }
       name:  { type: 'string', default: '' }
