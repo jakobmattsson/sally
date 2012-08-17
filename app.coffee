@@ -175,7 +175,7 @@ mod =
       # This is a many-to-many relationship. The name of the attribute must be unique among
       # models and other many-to-many relationships as it will be used as a url-component.
       # Write a check for it and write a test that proves it.
-      attendees: { type: 'hasMany', model: 'contacts' }
+      attendingContacts: { type: 'hasMany', model: 'contacts' }
 
   contacts:
     auth: defaultAuth()

@@ -300,36 +300,36 @@ query('Create many-to-many relation')
 .post('/companies/#{company}/contacts').res('Created first contact', save 'contact1')
 .post('/companies/#{company}/contacts').res('Created second contact', save 'contact2')
 .post('/companies/#{company}/meetings').res('Created meeting', save 'meeting')
-.post('/meetings/#{meeting}/attendees/#{contact1}')
+.post('/meetings/#{meeting}/attendingContacts/#{contact1}')
 .res('Settings first contact to meeting', (data) -> data.should.eql {})
-.post('/attendees/#{contact2}/meetings/#{meeting}')
+.post('/attendingContacts/#{contact2}/meetings/#{meeting}')
 .res('Settings second contact to meeting', (data) -> data.should.eql {})
-.get('/meetings/#{meeting}/attendees')
+.get('/meetings/#{meeting}/attendingContacts')
 .res('Getting all meeting attendees', (data) ->
   data.should.have.lengthOf 2
   data[0].should.include { company: @company, id: @contact1 }
   data[1].should.include { company: @company, id: @contact2 }
 )
-.get('/attendees/#{contact1}/meetings')
+.get('/attendingContacts/#{contact1}/meetings')
 .res('Getting the meetings from an attendant', (data) ->
   data.should.have.lengthOf(1)
   data[0].should.have.property 'account'
-  data[0].attendees.should.eql [@contact1, @contact2]
+  data[0].attendingContacts.should.eql [@contact1, @contact2]
   data[0].should.have.property 'company', @company
   data[0].should.have.property 'notes', ''
   data[0].should.have.property 'when', null
   data[0].should.have.property 'id', @meeting
 )
-.del('/meetings/#{meeting}/attendees/#{contact1}')
+.del('/meetings/#{meeting}/attendingContacts/#{contact1}')
 .res('Removed contact from meeting', (data) -> data.id.should.eql @contact1)
-.del('/attendees/#{contact2}/meetings/#{meeting}')
+.del('/attendingContacts/#{contact2}/meetings/#{meeting}')
 .res('Removed meeting from contact', (data) -> data.id.should.eql @meeting)
 .get('/companies/#{company}/contacts')
 .res('All contacts should still be in the db', (data) -> data.length.should.eql 2)
 .get('/companies/#{company}/meetings')
 .res('All meetings should still be in the db', (data) -> data.length.should.eql 1)
-.get('/meetings/#{meeting}/attendees')
-.res('Getting all meeting attendees', (data) -> data.should.eql [])
+.get('/meetings/#{meeting}/attendingContacts')
+.res('Getting all meeting attendingContacts', (data) -> data.should.eql [])
 .run()
 
 
