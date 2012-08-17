@@ -203,8 +203,7 @@ exports.run = (settings, callback) ->
   app.use express.responseTime()
   app.use viaduct.connect()
 
-
-  nconf.env().argv().defaults
+  nconf.env().argv().overrides(settings).defaults
     mongo: 'mongodb://localhost/sally'
     port: 3000
 

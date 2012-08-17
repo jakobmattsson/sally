@@ -2,12 +2,12 @@ nconf = require 'nconf'
 should = require 'should'
 mongojs = require 'mongojs'
 trester = require 'trester'
-query = (text) -> trester.query(text, { origin: 'http://localhost:3000' })
+query = (text) -> trester.query(text, { origin: 'http://localhost:3001' })
 save = (name) -> (data) -> this[name] = data.id
 
 
-mongojs.connect('mongodb://localhost/sally').dropDatabase () ->
-  require('./app').run({}, trester.trigger)
+mongojs.connect('mongodb://localhost/sally-test').dropDatabase () ->
+  require('./app').run({ port: 3001, mongo: 'mongodb://localhost/sally-test' }, trester.trigger)
 
 
 query('Root')
