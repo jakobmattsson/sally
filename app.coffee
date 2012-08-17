@@ -176,6 +176,7 @@ mod =
       # models and other many-to-many relationships as it will be used as a url-component.
       # Write a check for it and write a test that proves it.
       attendingContacts: { type: 'hasMany', model: 'contacts' }
+      attendingSellers: { type: 'hasMany', model: 'users' }
 
   contacts:
     auth: defaultAuth()
@@ -186,6 +187,7 @@ mod =
       role:  { type: 'string', default: '' }
       phone: { type: 'string', default: '' }
       email: { type: 'string', default: '' }
+      primary: { type: 'boolean', default: false }
 
 
 
