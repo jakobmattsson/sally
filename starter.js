@@ -1,4 +1,4 @@
 require('coffee-script');
 
-var app = require('./app');
+var app = require('./src/app');
 app.run({}, function() {});

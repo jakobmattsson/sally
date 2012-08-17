@@ -7,7 +7,7 @@ save = (name) -> (data) -> this[name] = data.id
 
 
 mongojs.connect('mongodb://localhost/sally-test').dropDatabase () ->
-  require('./app').run({ port: 3001, mongo: 'mongodb://localhost/sally-test' }, trester.trigger)
+  require('./src/app').run({ port: 3001, mongo: 'mongodb://localhost/sally-test' }, trester.trigger)
 
 
 query('Root')

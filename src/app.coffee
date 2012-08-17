@@ -18,7 +18,7 @@ if process.env.NODE_ENV == 'production'
 
 else
 
-  lockeMock = require '../locke/src/expoapi'
+  lockeMock = require '../../locke/src/expoapi'
 
   lockeMock.mockApp = (app, callback) ->
     email = 'owning-user-' + app
