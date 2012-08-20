@@ -6,6 +6,7 @@ trester = require 'trester'
 query = (text) -> trester.query(text, { origin: 'http://localhost:3001' })
 save = (name) -> (data) -> this[name] = data.id
 
+defaultPassword = 'summertime'
 
 mongojs.connect('mongodb://localhost/sally-test').dropDatabase () ->
   require('./src/app').run({ port: 3001, mongo: 'mongodb://localhost/sally-test' }, trester.trigger)
@@ -34,14 +35,14 @@ query('No resource')
 
 
 query('Can get accouts as admin')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .get('/accounts')
 .res('Got accounts')
 .run()
 
 
 query('User can only get own account')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a1' })
 .res('Created account', save 'account')
 .post('/accounts', { name: 'a2' })
@@ -57,7 +58,7 @@ query('User can only get own account')
 
 
 query('There cant exist a user and an admin with the same name')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/admins', { username: 'collidingName', password: 'somepassword' })
 .post('/accounts', { name: 'a3' })
 .res('Created account', save 'account')
@@ -69,7 +70,7 @@ query('There cant exist a user and an admin with the same name')
 
 
 query('No one can access password for admins or users')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/admins', { username: 'admin1', password: 'admin1' })
 .res('Created admin', save 'admin')
 .post('/accounts', { name: 'a4' })
@@ -88,7 +89,7 @@ query('No one can access password for admins or users')
 
 
 query('Users can only see themselves, unless they are account admins, in which case they can see the same account')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a5' })
 .res('Created account', save 'account1')
 .post('/accounts/#{account1}/users', { username: 'user1', password: 'user1_' })
@@ -113,21 +114,21 @@ query('Users can only see themselves, unless they are account admins, in which c
 
 
 query('No resource')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .get('/foobar')
 .err(400, 'No such resource')
 .run()
 
 
 query('No id')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .get('/companies/123456781234567812345678')
 .err(400, 'No such id')
 .run()
 
 
 query('Testing so invalid IDs return the same error message as nonexisting IDs')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .get('/companies/1234')
 .err(400, 'No such id')
 .run()
@@ -135,17 +136,17 @@ query('Testing so invalid IDs return the same error message as nonexisting IDs')
 
 
 query('Creating companies')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a7' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
-.res('Created company', (data) -> data.should.have.keys ['id', 'notes', 'name', 'address', 'account', 'orgnr', 'city', 'zip', 'about'])
+.res('Created company', (data) -> data.should.have.keys ['id', 'notes', 'name', 'address', 'account', 'orgnr', 'city', 'zip', 'about', 'website'])
 .run()
 
 
 
 query('Attempting to save nonexisting field')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a8' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -157,7 +158,7 @@ query('Attempting to save nonexisting field')
 
 
 query('Ensure that PUT-operations are atomic')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a9' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -172,7 +173,7 @@ query('Ensure that PUT-operations are atomic')
 
 
 query('Attempting to override id')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a10' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -184,7 +185,7 @@ query('Attempting to override id')
 
 
 query('Attempting to override _id')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a11' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -196,7 +197,7 @@ query('Attempting to override _id')
 
 
 query('Cascading delete')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a12' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -234,7 +235,7 @@ query('Cascading delete')
 
 
 query('Meeting pointing to a valid call or nothing')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a13' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -270,7 +271,7 @@ query('Meeting pointing to a valid call or nothing')
 
 
 query('Nulling foreign keys when pointed item is removed')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a15' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -293,7 +294,7 @@ query('Nulling foreign keys when pointed item is removed')
 
 
 query('Create many-to-many relation')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a16' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/companies')
@@ -367,7 +368,7 @@ query('Test meta fields')
 
 
 query('Creating users')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a17' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'foo', password: 'bazbaz' })
@@ -377,7 +378,7 @@ query('Creating users')
 
 
 query('Attempting to create another user with the same username')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a18' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'foo', password: 'bazbaz' })
@@ -387,7 +388,7 @@ query('Attempting to create another user with the same username')
 
 
 query('Attempting to create user without username or password')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a19' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users')
@@ -397,7 +398,7 @@ query('Attempting to create user without username or password')
 
 
 query('Setting a boolean type by passing in any truthy value')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a20' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'foobar', password: 'bazbaz', accountAdmin: 'yes' })
@@ -407,7 +408,7 @@ query('Setting a boolean type by passing in any truthy value')
 
 
 query('Setting a boolean type by passing in any falsy value')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a21' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'foz', password: 'bazbaz', accountAdmin: 0 })
@@ -417,7 +418,7 @@ query('Setting a boolean type by passing in any falsy value')
 
 
 query('Testing security access between accounts')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a22' })
 .res('Created account #1', save 'account1')
 .post('/accounts/#{account1}/users', { username: 'test_u1', 'password': '123baz' })
@@ -444,7 +445,7 @@ query('Testing security access between accounts')
 
 
 query('Testing read, write and create auths for accounts')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a24' })
 .res('Created account #1', save 'account1')
 .post('/accounts', { name: 'a25' })
@@ -453,7 +454,7 @@ query('Testing read, write and create auths for accounts')
 .res('Created user #1', save 'user1')
 .post('/accounts/#{account1}/users', { username: 'ua2', password: 'p12345', accountAdmin: false })
 .res('Created user #2', save 'user2')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .get('/accounts')
 .res('Reading accounts as admin', (data) -> data.length.should.be.above 1)
 .put('/accounts/#{account1}', { name: 'new_name' })
@@ -494,7 +495,7 @@ query('Special signup route (user that already exists)')
 
 
 query('Special signup route (invited user)')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'acc1' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'us1234' })
@@ -508,7 +509,7 @@ query('Special signup route (invited user)')
 
 
 query('Special signup route')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'busyAccount' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'busyUser', password: 'some_password' })
@@ -531,7 +532,7 @@ query('Special signup route')
 
 
 # query('Special signup route')
-# .auth('admin0', 'admin0')
+# .auth('admin0', defaultPassword)
 # .post('/accounts', { name: 'natural' })
 # .res('Making sure the name is used as the natural id', (data) -> data.should.eql { id: 'natural', name: 'natural' })
 # .run()
@@ -539,7 +540,7 @@ query('Special signup route')
 
 
 query('Setting the seller for a company')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a30' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'foo30', password: 'bazbaz', accountAdmin: true })
@@ -557,7 +558,7 @@ query('Setting the seller for a company')
 
 
 query('An admin should not be able to create a user without specing an account')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/users', { name: 'u2-1' })
 .err(400, 'Missing owner')
 .run()
@@ -565,7 +566,7 @@ query('An admin should not be able to create a user without specing an account')
 
 
 query('An account admin should be able to create a user without specing an account')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a101' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'a101-u1', password: 'p1p1p1', accountAdmin: true })
@@ -578,7 +579,7 @@ query('An account admin should be able to create a user without specing an accou
 
 
 query('A regular user should not be able to create a user without specing an account')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a102' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'a102-u1', password: 'p1p1p1', accountAdmin: false })
@@ -591,7 +592,7 @@ query('A regular user should not be able to create a user without specing an acc
 
 
 query('A regular user should be able to create a company without specing an account')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a103' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'a103-u1', password: 'p1p1p1', accountAdmin: false })
@@ -604,7 +605,7 @@ query('A regular user should be able to create a company without specing an acco
 
 
 query('A regular user should be able to create a meeting without specing a company')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a104' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'a104-u1', password: 'p1p1p1', accountAdmin: false })
@@ -616,7 +617,7 @@ query('A regular user should be able to create a meeting without specing a compa
 
 
 query('Sorting accounts')
-.auth('admin0', 'admin0')
+.auth('admin0', defaultPassword)
 .post('/accounts', { name: 'a110' })
 .res('Created account', save 'account')
 .post('/accounts/#{account}/users', { username: 'a110-u1' })
