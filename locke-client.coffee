@@ -1,9 +1,9 @@
 request = require 'request'
 
-module.exports =
+module.exports = (host) ->
   createUser: (app, username, password, callback) ->
     request.post
-      url: 'https://locke.nodejitsu.com/createUser'
+      url: host + '/createUser'
       json:
         app: app
         email: username
@@ -13,7 +13,7 @@ module.exports =
       callback(null, body)
   authPassword: (app, username, password, ttl, callback) ->
     request.post
-      url: 'https://locke.nodejitsu.com/authPassword'
+      url: host + '/authPassword'
       json:
         app: app
         email: username
@@ -24,7 +24,7 @@ module.exports =
       callback(null, body)
   authToken: (app, username, token, callback) ->
     request.post
-      url: 'https://locke.nodejitsu.com/authToken'
+      url: host + '/authToken'
       json:
         app: app
         email: username

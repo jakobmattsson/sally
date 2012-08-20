@@ -8,34 +8,9 @@ _ = require 'underscore'
 _.mixin require 'underscore.plus'
 
 
-if process.env.NODE_ENV == 'production'
-
-  lockeMock = require './locke-client'
-
-  lockeAuth = (username, token, callback) ->
-    lockeMock.authToken 'sally', username, token, (err, res) ->
-      callback(err, true)
-
-else
-
-  lockeMock = require '../../locke/src/expoapi'
-
-  lockeMock.mockApp = (app, callback) ->
-    email = 'owning-user-' + app
-    password = 'allfornought'
-    lockeMock.createUser 'locke', email, password, ->
-      lockeMock.authPassword 'locke', email, password, 86400, (err, res) ->
-        lockeMock.createApp email, res.token, app, callback
-
-  lockeAuth = (username, password, callback) ->
-    lockeMock.authPassword 'sally', username, password, 86400, (err, res) ->
-      return callback(err) if err
-      return callback(null, false) if !res.token?
-      lockeMock.authToken 'sally', username, res.token, (err, res) ->
-        callback(err, true)
-
-
-
+sharpLocke = process.env.NODE_ENV == 'production'
+lockeHost = if sharpLocke then 'https://locke.nodejitsu.com' else 'http://localhost:6002'
+locke = require('../locke-client')(lockeHost)
 
 
 
@@ -57,8 +32,8 @@ getUserFromDb = (req, callback) ->
   username = au[0]
   token = au[1]
 
-  lockeAuth username, token, (err, authed) ->
-    return callback(null, null) if err || !authed
+  locke.authToken 'sally', username, token, (err, res) ->
+    return callback(null, null) if err || res?.status != 'OK'
 
     async.map ['admins', 'users'], (collection, callback) ->
       getUserConnection[collection].find { username: username }, callback
@@ -131,6 +106,7 @@ mod =
       zip: { type: 'string', default: '' }
       city: { type: 'string', default: '' }
       notes: { type: 'string', default: '' }
+      website: { type: 'string', default: '' }
       about: { type: 'string', default: '' }
       nextCall: { type: 'date' }
       nextCallStrict: { type: 'boolean' }
@@ -218,19 +194,15 @@ exports.run = (settings, callback) ->
 
   console.log("Starting up")
   console.log("Environment mongo:", nconf.get('mongo'))
-  console.log("Envornment NODE_ENV:", process.env.NODE_ENV)
+  console.log("Environment NODE_ENV:", process.env.NODE_ENV)
   console.log("Environment port:", nconf.get('port'))
 
   api.connect nconf.get('mongo'), (err) ->
-    if err
-      console.log "ERROR: Could not connect to db"
-      return
+    return console.log "ERROR: Could not connect to db" if err
 
     # Bootstrap an admin if there are none
     api.list 'admins', { }, (err, data) ->
-      if err
-        console.log err
-        return
+      return console.log err if err
 
       onGo = ->
 
@@ -239,14 +211,13 @@ exports.run = (settings, callback) ->
 
           api.getOne 'users', { username: req.body.username }, (err, data) ->
             if data?
-              lockeMock.createUser 'sally', req.body.username || '', req.body.password || '', (err, data) ->
+              return locke.createUser 'sally', req.body.username || '', req.body.password || '', (err, data) ->
                 #err is not enough
                 if err?
                   apa.respond(req, res, { err: 'Could not create user' }, 400)
                   return
 
                 apa.respond(req, res, { whatever: 'should return something useful here' })
-              return
 
             api.post 'accounts', { name: req.body.account || 'randomName' + new Date().getTime() }, (err, accountData) ->
               if err
@@ -260,7 +231,7 @@ exports.run = (settings, callback) ->
                     apa.respond(req, res, { err: 'Could not create user' }, 400)
                   return
 
-                lockeMock.createUser 'sally', req.body.username || '', req.body.password || '', (err, data) ->
+                locke.createUser 'sally', req.body.username || '', req.body.password || '', (err, data) ->
                   # err is not enough. "data" can contain a bad http status code.
                   if err?
                     api.delOne 'accounts', { id: accountId }, (err, delData) ->
@@ -276,14 +247,14 @@ exports.run = (settings, callback) ->
         app.post '/admins', (req, res, next) ->
           username = req.body.username
           password = req.body.password
-          lockeMock.createUser 'sally', username, password, ->
+          locke.createUser 'sally', username, password, ->
             next()
 
         # behövs denna?
         app.post '/accounts/:account/users', (req, res, next) ->
           username = req.body.username || ''
           password = req.body.password || ''
-          lockeMock.createUser 'sally', username, password, ->
+          locke.createUser 'sally', username, password, ->
             next()
 
         # speciale
@@ -295,17 +266,33 @@ exports.run = (settings, callback) ->
         app.listen nconf.get('port')
         callback()
 
+
+
+      wrapOnGo = (go) ->
+        return go if sharpLocke
+        () ->
+          async.forEach ['admins', 'users'], (collection, callback) ->
+            api.list collection, (err, data) ->
+              async.forEach data, (user, callback) ->
+                locke.createUser 'sally', user.username, 'summertime', (err, data) ->
+                  return callback(err) if err
+                  return callback(data.status) if data.status != 'OK' && data.status != 'The given email is already in use for this app'
+                  callback()
+              , callback
+          , (err) ->
+            go()
+      onGo = wrapOnGo(onGo)
+
       if data.length > 0
         onGo()
       else
-        lockeMock.mockApp 'sally', ->
-          lockeMock.createUser 'sally', 'admin0', 'admin0', ->
-            api.post 'admins', { username: 'admin0', password: 'admin0' }, (err) ->
-              if err
-                console.log(err)
-                process.exit(1)
-              else
-                onGo()
+        console.log("Bootstrapping an admin...")
+        api.post 'admins', { username: 'admin0' }, (err) ->
+          if err
+            console.log(err)
+            process.exit(1)
+          else
+            onGo()
 
 process.on 'uncaughtException', (ex) ->
   console.log 'Uncaught exception:', ex.message
