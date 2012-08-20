@@ -212,8 +212,7 @@ exports.run = (settings, callback) ->
           api.getOne 'users', { username: req.body.username }, (err, data) ->
             if data?
               return locke.createUser 'sally', req.body.username || '', req.body.password || '', (err, data) ->
-                #err is not enough
-                if err?
+                if err? || data?.status != 'OK'
                   apa.respond(req, res, { err: 'Could not create user' }, 400)
                   return
 
@@ -232,11 +231,9 @@ exports.run = (settings, callback) ->
                   return
 
                 locke.createUser 'sally', req.body.username || '', req.body.password || '', (err, data) ->
-                  # err is not enough. "data" can contain a bad http status code.
-                  if err?
+                  if err? || data?.status != 'OK'
                     api.delOne 'accounts', { id: accountId }, (err, delData) ->
-                      api.delOne 'users', { id: userData.id.toString() }, (err, delData) ->
-                        apa.respond(req, res, { err: 'Could not create account' }, 400)
+                      apa.respond(req, res, { err: 'Could not create user' }, 400)
                     return
 
                   if mod.accounts.naturalId?
