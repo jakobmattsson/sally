@@ -361,6 +361,7 @@ query('Test meta fields')
   { name: 'notes', type: 'string', readonly: false, required: false }
   { name: 'orgnr', type: 'string', readonly: false, required: false }
   { name: 'seller', type: 'string', readonly: false, required: false }
+  { name: 'website', type: 'string', readonly: false, required: false }
   { name: 'zip', type: 'string', readonly: false, required: false }
 ]))
 .run()
@@ -515,7 +516,7 @@ query('Special signup route')
 .post('/accounts/#{account}/users', { username: 'busyUser', password: 'some_password' })
 .auth()
 .post('/signup', { username: 'apa' })
-.err(400, 'Could not create account')
+.err(400, 'Could not create user') # no password
 .post('/signup', { username: 'busyUser', password: 'something', account: 'myAccountName' })
 .err(400, 'Could not create user')
 .post('/signup', { username: 'myUsername', password: 'something', account: 'busyAccount' })
