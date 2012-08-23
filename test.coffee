@@ -3,13 +3,41 @@ nconf = require 'nconf'
 should = require 'should'
 mongojs = require 'mongojs'
 trester = require 'trester'
-query = (text) -> trester.query(text, { origin: 'http://localhost:3001' })
+locke = require 'locke'
+
+db = locke.db.mem.init()
+emailClient = locke.emailMock.setup({ folder: 'tests/emails' })
+api = locke.api.init(db, 1, emailClient)
+locke.server.run(api, db, 6002)
+
+createApp = (api, app, callback) ->
+  email = 'owning-user-' + app
+  password = 'allfornought'
+  api.createUser 'locke', email, password, (err) ->
+    return callback(err) if (err)
+    api.authPassword 'locke', email, password, 86400, (err, res) ->
+      return callback(err) if (err)
+      api.createApp(email, res.token, app, callback)
+
+query = (text) ->
+  q = trester.query(text, { origin: 'http://localhost:3001' })
+  auth = q.auth
+  q.auth = (username, password) ->
+    auth (callback) ->
+      api.authPassword 'sally', username, password, 86400, (err, res) ->
+        return callback(err) if err?
+        callback(username, res?.token)
+    this
+  q
+
 save = (name) -> (data) -> this[name] = data.id
 
 defaultPassword = 'summertime'
 
 mongojs.connect('mongodb://localhost/sally-test').dropDatabase () ->
-  require('./src/app').run({ port: 3001, mongo: 'mongodb://localhost/sally-test' }, trester.trigger)
+  createApp api, 'sally', (err) ->
+    require('./src/app').run { port: 3001, mongo: 'mongodb://localhost/sally-test' }, () ->
+      trester.trigger()
 
 
 query('Root')
