@@ -86,7 +86,8 @@ mod =
       username: { type: 'string', required: true, unique: true, validate: valUniqueInModel('users', 'username') }
 
   users:
-    auth: adminWrap (user) -> if user.accountAdmin then { account: user.account } else { id: user.id }
+    auth: defaultAuth()
+    authWrite: adminWrap (user) -> if user.accountAdmin then { account: user.account } else { id: user.id }
     authCreate: adminWrap (user) -> if user.accountAdmin then { account: user.account } else null
     owners: account: 'accounts'
     defaultSort: 'username'
