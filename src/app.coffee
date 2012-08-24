@@ -191,12 +191,12 @@ exports.run = (settings, callback) ->
 
   nconf.env().argv().overrides(settings).defaults
     mongo: 'mongodb://localhost/sally'
-    port: 3000
+    PORT: 3000
 
   console.log("Starting up")
   console.log("Environment mongo:", nconf.get('mongo'))
   console.log("Environment NODE_ENV:", process.env.NODE_ENV)
-  console.log("Environment port:", nconf.get('port'))
+  console.log("Environment port:", nconf.get('PORT'))
 
   api.connect nconf.get('mongo'), (err) ->
     return console.log "ERROR: Could not connect to db" if err
@@ -261,7 +261,7 @@ exports.run = (settings, callback) ->
         #     res.json({ code: 200, body: { err: null, hej: 'san' } } )
 
         apa.exec app, api, getUserFromDb, mod
-        app.listen nconf.get('port')
+        app.listen nconf.get('PORT')
         callback()
 
 
