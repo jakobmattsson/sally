@@ -12,10 +12,16 @@ npm test || {
   echo >&2 "Test failed, aborting."
   exit 1
 }
-jitsu deploy -r patch || {
-  echo >&2 "Deployment failed, aborting."
-  exit 1
-}
+
+# Deploying to heroku
+git push heroku master
+
+# Deploying to nodejitsu
+#jitsu deploy -r patch || {
+#  echo >&2 "Deployment failed, aborting."
+#  exit 1
+#}
+
 VERSION=`cat package.json | json -aC "version"`
 git add package.json
 git commit -m $VERSION
