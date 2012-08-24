@@ -5,7 +5,7 @@
   "version": "0.4.2",
   "author": "Jakob Mattsson <jakob.mattsson@gmail.com> (jakobmattsson.se)",
   "engines": {
-    "npm": "1.1.48",
+    "npm": "1.1.x",
     "node": "0.8.6"
   },
   "dependencies": {
