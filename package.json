@@ -27,13 +27,16 @@
     "trester": "0.2.x",
     "should": "0.6.x"
   },
-  "subdomain": "sally",
-  "domains": [
-    "api.sally.jdevab.com"
-  ],
   "scripts": {
     "test": "mocha -t 5000 -R list --compilers coffee:coffee-script -b test.coffee",
     "deploy": "sh deploy.sh",
     "start": "node starter.js"
-  }
+  },
+
+
+
+  "subdomain": "sally",
+  "domains": [
+    "api.sally.jdevab.com"
+  ]
 }
