@@ -2,7 +2,7 @@
   "name": "sally",
   "description": "Dead simple CRM (api)",
   "main": "starter.js",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "author": "Jakob Mattsson <jakob.mattsson@gmail.com> (jakobmattsson.se)",
   "engines": {
     "node": ">=0.6.0"
