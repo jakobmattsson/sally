@@ -255,6 +255,9 @@ exports.run = (settings, callback) ->
           locke.createUser 'sally', username, password, ->
             next()
 
+        app.get '/version', (req, res) ->
+          res.json { version: '44' }
+
         # speciale
         # app.post '/auth', (req, res) ->
         #   getUserFromDb req, () ->
