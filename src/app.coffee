@@ -1,3 +1,5 @@
+fs = require 'fs'
+path = require 'path'
 db = require 'manikin-mongodb'
 apa = require 'rester'
 async = require 'async'
@@ -256,7 +258,10 @@ exports.run = (settings, callback) ->
             next()
 
         app.get '/version', (req, res) ->
-          res.json { version: '44' }
+          packagePath = path.resolve(__dirname, '../package.json')
+          fs.readFile packagePath, 'utf8', (err, data) ->
+            return res.send(400, err.toString()) if err
+            res.json { version: JSON.parse(data).version }
 
         # speciale
         # app.post '/auth', (req, res) ->
