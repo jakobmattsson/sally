@@ -13,8 +13,10 @@ npm test || {
   exit 1
 }
 
+# should bump version number before actual deploy
+
 # Deploying to heroku
-git push heroku master
+git push heroku master -f
 
 # Deploying to nodejitsu
 #jitsu deploy -r patch || {
