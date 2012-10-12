@@ -5,10 +5,18 @@ mongojs = require 'mongojs'
 trester = require 'trester'
 locke = require 'locke'
 
+process.on 'uncaughtException', (ex) ->
+  console.log 'Uncaught exception', ex.message
+  console.log ex.stack
+  process.exit 1
+
+lockePort = 6002
+sallyPort = 3001
+
 db = locke.db.mem.init()
 emailClient = locke.emailMock.setup({ folder: 'tests/emails' })
 api = locke.api.init(db, 1, emailClient)
-locke.server.run(api, db, 6002)
+locke.server.run(api, db, lockePort)
 
 createApp = (api, app, callback) ->
   email = 'owning-user-' + app
@@ -20,7 +28,7 @@ createApp = (api, app, callback) ->
       api.createApp(email, res.token, app, callback)
 
 query = (text) ->
-  q = trester.query(text, { origin: 'http://localhost:3001' })
+  q = trester.query(text, { origin: 'http://localhost:' + sallyPort })
   auth = q.auth
   q.auth = (username, password) ->
     auth (callback) ->
@@ -36,13 +44,43 @@ defaultPassword = 'summertime'
 
 mongojs.connect('mongodb://localhost/sally-test').dropDatabase () ->
   createApp api, 'sally', (err) ->
-    require('./src/app').run { port: 3001, mongo: 'mongodb://localhost/sally-test' }, () ->
+    require('../lib/app').run { port: sallyPort, mongo: 'mongodb://localhost/sally-test' }, () ->
       trester.trigger()
 
 
 query('Root')
 .get('/')
 .res('Get root', (data) -> data.should.eql { roots: ['accounts', 'admins'], verbs: ['signup'] })
+.run()
+
+
+
+query('Version')
+.get('/version')
+.res('Get the version number', (data) -> data.should.eql { version: "0.4.2" })
+.run()
+
+
+
+query('Auth-route without being logged in')
+.get('/auth')
+.res('Get login status', (data) -> data.should.eql { authenticated: false })
+.run()
+
+
+
+query('Auth-route with invalid credentials being logged in')
+.auth('invalid', 'invalid')
+.get('/auth')
+.res('Get login status', (data) -> data.should.eql { authenticated: false })
+.run()
+
+
+
+query('Auth-route when logged in as admin')
+.auth('admin0', defaultPassword)
+.get('/auth')
+.res('Get login status', (data) -> data.should.eql { authenticated: true })
 .run()
 
 
@@ -67,6 +105,7 @@ query('Can get accouts as admin')
 .get('/accounts')
 .res('Got accounts')
 .run()
+
 
 
 query('User can only get own account')

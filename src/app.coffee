@@ -1,58 +1,19 @@
-fs = require 'fs'
+Q = require 'q'
 path = require 'path'
-db = require 'manikin-mongodb'
-apa = require 'rester'
+manikin = require 'manikin-mongodb'
+rester = require 'rester'
 async = require 'async'
 nconf = require 'nconf'
-mongojs = require 'mongojs'
-viaduct = require 'viaduct-server'
 _ = require 'underscore'
 _.mixin require 'underscore.plus'
-
-
-sharpLocke = process.env.NODE_ENV == 'production'
-lockeHost = if sharpLocke then 'https://locke.nodejitsu.com' else 'http://localhost:6002'
-locke = require('../locke-client')(lockeHost)
+express = require 'express'
+lockeClient = require 'locke-client'
+resterTools = require 'rester-tools'
 
 
 
-api = db.create()
-
-
-getUserConnection = null
-
-getUserFromDb = (req, callback) ->
-  if !getUserConnection
-    getUserConnection = mongojs.connect nconf.get('mongo'), Object.keys(mod)
-
-  if !req.headers.authorization
-    callback(null, null)
-    return
-
-  code = req.headers.authorization.slice(6)
-  au = new Buffer(code, 'base64').toString('ascii').split(':')
-  username = au[0]
-  token = au[1]
-
-  locke.authToken 'sally', username, token, (err, res) ->
-    return callback(null, null) if err || res?.status != 'OK'
-
-    async.map ['admins', 'users'], (collection, callback) ->
-      getUserConnection[collection].find { username: username }, callback
-    , (err, results) ->
-      if err
-        callback(null, null)
-        return
-
-      if results[1].length > 0
-        callback(null, { account: results[1][0].account, id: results[1][0]._id, accountAdmin: results[1][0].accountAdmin })
-        return
-
-      if results[0].length > 0
-        callback(null, { admin: true })
-        return
-
-      callback(null, null)
+# Model support
+# =============================================================================
 
 adminWrap = (f) -> (user) ->
   return null if !user?
@@ -61,18 +22,19 @@ adminWrap = (f) -> (user) ->
 
 
 defaultAuth = (targetProperty) -> adminWrap (user) ->
-  return _.makeObject(targetProperty || 'account', user.account) if user.account
-  return null
+  if user.account then _.makeObject(targetProperty || 'account', user.account) else null
 
 
-valUniqueInModel = (model, property) -> (value, callback) ->
-  api.list model, _.makeObject(property, value), (err, data) ->
+valUniqueInModel = (model, property) -> (db, value, callback) ->
+  db.list model, _.makeObject(property, value), (err, data) ->
     callback(!err && data.length == 0)
 
 
 
+# Models
+# =============================================================================
 
-mod =
+models =
   accounts:
     auth: defaultAuth('id')
     authWrite: adminWrap (user) -> if user.accountAdmin then { id: user.account } else null
@@ -177,130 +139,143 @@ mod =
 
 
 
+# Custom routes
+# =============================================================================
 
-Object.keys(mod).forEach (modelName) ->
-  api.defModel modelName, mod[modelName]
+signupFunc = (db, app, locke) ->
+  rester.verb app, 'signup', (req, res) ->
 
+    db.getOne 'users', { username: req.body.username }, (err, data) ->
+      if data?
+        return locke.createUser 'sally', req.body.username || '', req.body.password || '', (err, data) ->
+          if err? || data?.status != 'OK'
+            rester.respond(req, res, { err: 'Could not create user' }, 400)
+            return
+
+          rester.respond(req, res, { whatever: 'should return something useful here' })
+
+      db.post 'accounts', { name: req.body.account || 'randomName' + new Date().getTime() }, (err, accountData) ->
+        if err
+          rester.respond(req, res, { err: 'Could not create account' }, 400)
+          return
+
+        accountId = accountData.id.toString()
+        db.post 'users', { account: accountId, username: req.body.username, accountAdmin: true }, (err, userData) ->
+          if err?
+            db.delOne 'accounts', { id: accountId }, (err, delData) ->
+              rester.respond(req, res, { err: 'Could not create user' }, 400)
+            return
+
+          locke.createUser 'sally', req.body.username || '', req.body.password || '', (err, data) ->
+            if err? || data?.status != 'OK'
+              db.delOne 'accounts', { id: accountId }, (err, delData) ->
+                rester.respond(req, res, { err: 'Could not create user' }, 400)
+              return
+
+            if models.accounts.naturalId?
+              accountData.id = accountData[models.accounts.naturalId]
+            rester.respond(req, res, accountData)
+
+
+
+# Application entry point
+# =============================================================================
 
 exports.run = (settings, callback) ->
 
-  express = require 'express'
-
-  app = express.createServer()
-  app.use express.bodyParser()
-  app.use express.responseTime()
-  app.use viaduct.connect()
+  # Reading and echoing the configuration for the application
+  settings ?= {}
+  callback ?= ->
 
   nconf.env().argv().overrides(settings).defaults
     mongo: 'mongodb://localhost/sally'
-    PORT: 3000
+    PORT: settings.port || 3000
 
-  console.log("Starting up")
-  console.log("Environment mongo:", nconf.get('mongo'))
-  console.log("Environment NODE_ENV:", process.env.NODE_ENV)
-  console.log("Environment port:", nconf.get('PORT'))
+  console.log "Starting up..."
+  console.log "* mongo: " + nconf.get('mongo')
+  console.log "* environment: " + process.env.NODE_ENV
+  console.log "* port: " + nconf.get('PORT')
 
-  api.connect nconf.get('mongo'), (err) ->
-    return console.log "ERROR: Could not connect to db" if err
+  # Creating the interface to the database
+  db = manikin.create()
 
-    # Bootstrap an admin if there are none
-    api.list 'admins', { }, (err, data) ->
-      return console.log err if err
+  # Setting up the express app
+  app = express.createServer()
+  app.use express.bodyParser()
+  app.use express.responseTime()
+  app.use resterTools.versionMid path.resolve(__dirname, '../package.json')
 
-      onGo = ->
+  # Setting up locke
+  sharpLocke = process.env.NODE_ENV == 'production'
+  locke = lockeClient(if sharpLocke then 'https://locke.nodejitsu.com' else 'http://localhost:6002') # TODO: must set up https for lockeapp.com so the proper DNS (abstracting underlying provider) can be used
 
-        # TODO: This whole method must be tested in a much more exhaustive way.
-        apa.verb app, 'signup', (req, res) ->
+  # Defining where user are stored in the models and how to get them
+  userModels = [
+    table: 'users'
+    usernameProperty: 'username'
+    callback: (r) -> { account: r.account, id: r.id, accountAdmin: r.accountAdmin }
+  ,
+    table: 'admins'
+    usernameProperty: 'username'
+    callback: (r) -> { admin: true }
+  ]
+  getUserFromDb = resterTools.authUser(
+    resterTools.authenticateWithBasicAuthAndLocke(locke, 'sally')
+    resterTools.getAuthorizationData(db, userModels)
+  )
 
-          api.getOne 'users', { username: req.body.username }, (err, data) ->
-            if data?
-              return locke.createUser 'sally', req.body.username || '', req.body.password || '', (err, data) ->
-                if err? || data?.status != 'OK'
-                  apa.respond(req, res, { err: 'Could not create user' }, 400)
-                  return
+  # Registering all models
+  db.defModels models
 
-                apa.respond(req, res, { whatever: 'should return something useful here' })
+  # Connecting to the database
+  Q.ninvoke(db, 'connect', nconf.get('mongo'))
+  .fail ->
+    console.log "ERROR: Could not connect to db"
 
-            api.post 'accounts', { name: req.body.account || 'randomName' + new Date().getTime() }, (err, accountData) ->
-              if err
-                apa.respond(req, res, { err: 'Could not create account' }, 400)
-                return
+  # Creating a default admin in case there are none
+  .then ->
+    Q.ninvoke(db, 'list', 'admins', {})
+  .then (data) ->
+    if data.length == 0
+      console.log("Bootstrapping an admin...")
+      Q.ninvoke(db, 'post', 'admins', { username: 'admin0' })
+  .fail (err) ->
+    console.log(err)
+    process.exit(1)
 
-              accountId = accountData.id.toString()
-              api.post 'users', { account: accountId, username: req.body.username, accountAdmin: true }, (err, userData) ->
-                if err?
-                  api.delOne 'accounts', { id: accountId }, (err, delData) ->
-                    apa.respond(req, res, { err: 'Could not create user' }, 400)
-                  return
+  #  Adding users to locke if it's being mocked
+  .then ->
+    return if sharpLocke
+    Q.ninvoke(resterTools, 'getAllUsernames', db, userModels)
+    .then (usernames) ->
+      Q.ninvoke(resterTools, 'createLockeUsers', locke, 'sally', 'summertime', usernames)
+    .end()
 
-                locke.createUser 'sally', req.body.username || '', req.body.password || '', (err, data) ->
-                  if err? || data?.status != 'OK'
-                    api.delOne 'accounts', { id: accountId }, (err, delData) ->
-                      apa.respond(req, res, { err: 'Could not create user' }, 400)
-                    return
+  # Adding custom routes to the app
+  .then ->
 
-                  if mod.accounts.naturalId?
-                    accountData.id = accountData[mod.accounts.naturalId]
-                  apa.respond(req, res, accountData)
+    signupFunc(db, app, locke) # TODO: This whole method must be tested in a much more exhaustive way.
 
-        # behövs denna?
-        app.post '/admins', (req, res, next) ->
-          username = req.body.username
-          password = req.body.password
-          locke.createUser 'sally', username, password, ->
-            next()
+    app.post '/admins', (req, res, next) -> # TODO: behövs denna hjälpmetod?
+      username = req.body.username
+      password = req.body.password
+      locke.createUser 'sally', username, password, ->
+        next()
 
-        # behövs denna?
-        app.post '/accounts/:account/users', (req, res, next) ->
-          username = req.body.username || ''
-          password = req.body.password || ''
-          locke.createUser 'sally', username, password, ->
-            next()
+    app.post '/accounts/:account/users', (req, res, next) -> # TODO: behövs denna hjälpmetod?
+      username = req.body.username || ''
+      password = req.body.password || ''
+      locke.createUser 'sally', username, password, ->
+        next()
 
-        app.get '/version', (req, res) ->
-          packagePath = path.resolve(__dirname, '../package.json')
-          fs.readFile packagePath, 'utf8', (err, data) ->
-            return res.send(400, err.toString()) if err
-            res.json { version: JSON.parse(data).version }
+    app.get '/auth', (req, res) ->
+      getUserFromDb req, (err, status) ->
+        res.json({ authenticated: status? })
 
-        # speciale
-        # app.post '/auth', (req, res) ->
-        #   getUserFromDb req, () ->
-        #     res.json({ code: 200, body: { err: null, hej: 'san' } } )
-
-        apa.exec app, api, getUserFromDb, mod
-        app.listen nconf.get('PORT')
-        callback()
-
-
-
-      wrapOnGo = (go) ->
-        return go if sharpLocke
-        () ->
-          async.forEach ['admins', 'users'], (collection, callback) ->
-            api.list collection, (err, data) ->
-              async.forEach data, (user, callback) ->
-                locke.createUser 'sally', user.username, 'summertime', (err, data) ->
-                  return callback(err) if err
-                  return callback(data.status) if data.status != 'OK' && data.status != 'The given email is already in use for this app'
-                  callback()
-              , callback
-          , (err) ->
-            go()
-      onGo = wrapOnGo(onGo)
-
-      if data.length > 0
-        onGo()
-      else
-        console.log("Bootstrapping an admin...")
-        api.post 'admins', { username: 'admin0' }, (err) ->
-          if err
-            console.log(err)
-            process.exit(1)
-          else
-            onGo()
-
-process.on 'uncaughtException', (ex) ->
-  console.log 'Uncaught exception:', ex.message
-  console.log ex.stack
-  process.exit 1
+  # Starting up the server
+  .then ->
+    rester.exec app, db, getUserFromDb, models
+    app.listen nconf.get('PORT')
+    console.log "Ready!"
+    callback()
+  .end()

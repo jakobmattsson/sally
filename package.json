@@ -1,40 +1,42 @@
 {
   "name": "sally",
   "description": "Dead simple CRM (api)",
-  "main": "starter.js",
+  "main": "./lib/app.js",
   "version": "0.4.2",
   "author": "Jakob Mattsson <jakob.mattsson@gmail.com> (jakobmattsson.se)",
+  "private": true,
   "engines": {
     "npm": "1.1.x",
     "node": "0.8.6"
   },
   "dependencies": {
-    "coffee-script": "1.3.x",
-    "mongoose": "2.6.x",
-    "manikin-mongodb": "0.4.1",
+    "manikin-mongodb": "0.6.x",
     "nconf": "0.5.x",
     "request": "2.10.x",
     "locke": "0.4.2",
     "mongojs": "0.4.x",
+    "q": "0.8.9",
     "rester": "0.3.0",
-    "underscore": "1.3.x",
+    "underscore": "1.4.2",
     "underscore.plus": "0.2.1",
     "async": "0.1.x",
+    "locke-client": "0.1.x",
+    "rester-tools": "0.1.x",
     "viaduct-server": "0.2.0",
     "express": "2.5.x"
   },
   "devDependencies": {
+    "coffee-script": "1.3.x",
     "trester": "0.2.x",
     "should": "0.6.x"
   },
   "scripts": {
-    "test": "mocha -t 5000 -R list --compilers coffee:coffee-script -b test.coffee",
-    "deploy": "sh deploy.sh",
-    "start": "node starter.js"
+    "pretest": "coffee -c -o lib src",
+    "prestart": "coffee -c -o lib src",
+    "test": "mocha -t 5000 -R list --compilers coffee:coffee-script -b test/test.coffee",
+    "deploy": "sh deploy/deploy.sh",
+    "start": "node ./lib/start.js"
   },
-
-
-
   "subdomain": "sally",
   "domains": [
     "api.sally.jdevab.com"
