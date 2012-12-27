@@ -16,13 +16,13 @@ npm test || {
 # should bump version number before actual deploy
 
 # Deploying to heroku
-git push heroku master -f
+#git push heroku master -f
 
 # Deploying to nodejitsu
-#jitsu deploy -r patch || {
-#  echo >&2 "Deployment failed, aborting."
-#  exit 1
-#}
+jitsu deploy -r patch || {
+  echo >&2 "Deployment failed, aborting."
+  exit 1
+}
 
 VERSION=`cat package.json | json -aC "version"`
 git add package.json
